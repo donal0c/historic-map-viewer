@@ -4,9 +4,10 @@ import { searchPlaces } from "../../lib/heritage";
 
 interface SearchPanelProps {
   onSelect: (result: SearchResult) => void;
+  onSearchStart?: () => void;
 }
 
-export default function SearchPanel({ onSelect }: SearchPanelProps) {
+export default function SearchPanel({ onSelect, onSearchStart }: SearchPanelProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [status, setStatus] = useState<"idle" | "searching" | "empty" | "error">(
@@ -18,6 +19,7 @@ export default function SearchPanel({ onSelect }: SearchPanelProps) {
     if (query.trim().length < 2) return;
 
     setStatus("searching");
+    onSearchStart?.();
     try {
       const next = await searchPlaces(query);
       setResults(next);

@@ -17,11 +17,11 @@ export function useHeritageData(center: LatLngTuple, zoom: number): HeritageData
 
   useEffect(() => {
     let cancelled = false;
-    setData((previous) => ({
-      ...previous,
+    setData({
+      features: [],
       status: "loading",
       radiusMeters: radiusForZoom(zoom),
-    }));
+    });
 
     const timer = window.setTimeout(() => {
       fetchHeritageData(center[0], center[1], zoom)

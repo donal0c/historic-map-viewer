@@ -34,7 +34,7 @@ export function addHeritageLayerToMap(
 
     if (!feature.coordinates) return;
     const [lat, lng] = feature.coordinates;
-    L.circleMarker([lat, lng], {
+    const marker = L.circleMarker([lat, lng], {
       radius: markerRadius(feature.layer),
       color: "#fffaf0",
       fillColor: COLORS[feature.layer],
@@ -44,6 +44,14 @@ export function addHeritageLayerToMap(
       className: `heritage-marker heritage-marker-${feature.layer}`,
     })
       .on("click", () => onSelectFeature(feature))
+      .on("mouseover", () => {
+        marker.setRadius(markerRadius(feature.layer) + 1.4);
+        marker.setStyle({ weight: 2.3 });
+      })
+      .on("mouseout", () => {
+        marker.setRadius(markerRadius(feature.layer));
+        marker.setStyle({ weight: 1.7 });
+      })
       .bindTooltip(feature.title, {
         direction: "top",
         offset: [0, -8],

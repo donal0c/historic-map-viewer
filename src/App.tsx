@@ -49,7 +49,10 @@ export default function App() {
       />
 
       <div className="top-left-stack">
-        <SearchPanel onSelect={handleSearchSelect} />
+        <SearchPanel
+          onSelect={handleSearchSelect}
+          onSearchStart={() => setSelectedFeature(null)}
+        />
         <MapToolbar
           state={state}
           heritageData={heritageData}
