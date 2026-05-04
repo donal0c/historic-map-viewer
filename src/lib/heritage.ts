@@ -31,6 +31,13 @@ const LIMITS: Record<HeritageLayerId, number> = {
   niah: 28,
   excavations: 28,
 };
+const HERITAGE_CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_HERITAGE_CACHE_ENTRIES = 24;
+
+interface HeritageCacheEntry {
+  data: HeritageData;
+  expiresAt: number;
+}
 
 interface GeoJsonFeature {
   geometry: {
@@ -43,6 +50,9 @@ interface GeoJsonFeature {
 interface GeoJsonCollection {
   features?: GeoJsonFeature[];
 }
+
+const heritageCache = new Map<string, HeritageCacheEntry>();
+const heritageRequests = new Map<string, Promise<HeritageData>>();
 
 export const HERITAGE_LAYER_LABELS: Record<HeritageLayerId, string> = {
   smr: "Archaeology",
@@ -98,22 +108,39 @@ export async function fetchHeritageData(
   zoom: number
 ): Promise<HeritageData> {
   const radiusMeters = radiusForZoom(zoom);
+  const cacheKey = heritageCacheKey(lat, lng, radiusMeters);
+  const cached = heritageCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  const inFlight = heritageRequests.get(cacheKey);
+  if (inFlight) return inFlight;
+
   const layers: HeritageLayerId[] = ["smr", "zones", "niah", "excavations"];
-
-  const settled = await Promise.allSettled(
+  const request = Promise.allSettled(
     layers.map((layer) => fetchLayer(layer, lat, lng, radiusMeters))
-  );
+  )
+    .then((settled) => {
+      const data: HeritageData = {
+        features: settled.flatMap((result) =>
+          result.status === "fulfilled" ? result.value : []
+        ),
+        status: "ready",
+        updatedAt: new Date().toISOString(),
+        radiusMeters,
+      };
 
-  const features = settled.flatMap((result) =>
-    result.status === "fulfilled" ? result.value : []
-  );
+      setHeritageCache(cacheKey, data);
+      return data;
+    })
+    .finally(() => {
+      heritageRequests.delete(cacheKey);
+    });
 
-  return {
-    features,
-    status: "ready",
-    updatedAt: new Date().toISOString(),
-    radiusMeters,
-  };
+  heritageRequests.set(cacheKey, request);
+  return request;
 }
 
 async function fetchLayer(
@@ -235,6 +262,27 @@ function stringValue(value: unknown): string {
 
 function compact(values: string[], joiner = " · "): string {
   return values.filter(Boolean).join(joiner);
+}
+
+function heritageCacheKey(lat: number, lng: number, radiusMeters: number): string {
+  return `${lat.toFixed(3)},${lng.toFixed(3)},${radiusMeters}`;
+}
+
+function setHeritageCache(key: string, data: HeritageData) {
+  if (heritageCache.has(key)) {
+    heritageCache.delete(key);
+  }
+
+  heritageCache.set(key, {
+    data,
+    expiresAt: Date.now() + HERITAGE_CACHE_TTL_MS,
+  });
+
+  while (heritageCache.size > MAX_HERITAGE_CACHE_ENTRIES) {
+    const oldestKey = heritageCache.keys().next().value;
+    if (!oldestKey) break;
+    heritageCache.delete(oldestKey);
+  }
 }
 
 async function fetchJsonWithTimeout<T>(url: string, timeoutMs: number): Promise<T> {
