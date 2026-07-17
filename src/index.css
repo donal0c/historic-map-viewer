@@ -385,7 +385,24 @@ select:focus-visible {
 }
 
 .toolbar-group.blend {
-  display: none;
+  display: flex;
+  grid-column: 1;
+  grid-row: 2;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-group.blend select {
+  min-width: 110px;
+  height: 29px;
+  border: 1px solid rgba(250, 245, 231, 0.12);
+  border-radius: 7px;
+  padding: 0 28px 0 9px;
+  color: #e5e6df;
+  background: #2a2f29;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .segmented {
@@ -437,9 +454,11 @@ select:focus-visible {
 }
 
 .toolbar-stats {
-  grid-column: 1 / -1;
+  grid-column: 2;
+  grid-row: 2;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   color: #aeb5a9;
   font-size: 9px;

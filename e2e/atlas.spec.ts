@@ -167,6 +167,106 @@ test("keeps one map runtime and does not refetch evidence across modes", async (
   expect(consoleErrors).toEqual([]);
 });
 
+test("operates the complete desktop map control surface", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "desktop",
+    "Desktop exposes every control without the compact More menu",
+  );
+  await mockPublicSources(page);
+  await page.goto(
+    "/#53.33027,-8.22138,14,ireland-1inch-1st,osm,0.70,overlay,normal",
+  );
+
+  for (const era of [
+    "1829-1842",
+    "1888-1913",
+    "Early OS",
+    "Contours",
+    "1941-43",
+    "1940",
+  ]) {
+    const button = page.getByRole("button", { name: era, exact: true });
+    await button.click();
+    await expect(button).toHaveClass("active");
+  }
+
+  for (const basemap of ["OSM", "Light", "Dark", "Sat"]) {
+    const button = page.getByRole("button", { name: basemap, exact: true });
+    await button.click();
+    await expect(button).toHaveClass("active");
+  }
+
+  const overlay = page
+    .locator(".compare-desktop")
+    .getByRole("button", { name: "Overlay", exact: true });
+  await overlay.click();
+  const blend = page.locator(".toolbar-group.blend select");
+  for (const option of [
+    "normal",
+    "multiply",
+    "screen",
+    "overlay",
+    "soft-light",
+  ]) {
+    await blend.selectOption(option);
+    await expect(blend).toHaveValue(option);
+  }
+  const opacity = page.getByRole("slider", {
+    name: "Historical map opacity",
+  });
+  await opacity.fill("0.42");
+  await expect(opacity).toHaveValue("0.42");
+  await expect(page.locator(".opacity-control output")).toHaveText("42%");
+
+  const swipe = page
+    .locator(".compare-desktop")
+    .getByRole("button", { name: "Swipe", exact: true });
+  await swipe.click();
+  const reveal = page.getByRole("slider", {
+    name: "Historical map reveal position",
+  });
+  await reveal.fill("64");
+  await expect(reveal).toHaveValue("64");
+  await expect(page.getByTestId("swipe-divider")).toHaveAttribute(
+    "style",
+    /left: 64%/,
+  );
+
+  await page
+    .locator(".compare-desktop")
+    .getByRole("button", { name: "Side", exact: true })
+    .click();
+  await expect(page.locator(".map-runtime-secondary")).toBeVisible();
+
+  await page
+    .locator(".compare-desktop")
+    .getByRole("button", { name: "Lens", exact: true })
+    .click();
+  await expect(page.getByTestId("map-runtime")).toHaveClass(
+    /map-runtime-spyglass/,
+  );
+
+  await page.getByRole("button", { name: /Evidence 3/ }).click();
+  const presetCounts: Record<string, number> = {
+    Archaeology: 7,
+    "Built heritage": 5,
+    Maritime: 5,
+    Military: 5,
+    "Sacred landscape": 5,
+    Transport: 3,
+  };
+  for (const [preset, count] of Object.entries(presetCounts)) {
+    await page.getByRole("button", { name: preset, exact: true }).click();
+    await expect(page.locator(".layer-catalogue-trigger em")).toHaveText(
+      String(count),
+    );
+  }
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect(page.locator(".layer-catalogue-trigger em")).toHaveText("0");
+});
+
 test("loads optional public evidence only after a preset is enabled", async ({
   page,
 }) => {
