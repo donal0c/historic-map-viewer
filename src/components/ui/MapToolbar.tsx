@@ -20,6 +20,9 @@ export default function MapToolbar({
   const activeSources = Object.values(heritageData.sources).filter(
     (source) => source?.status === "ready",
   ).length;
+  const hasTruncatedSource = Object.values(heritageData.sources).some(
+    (source) => source?.truncated,
+  );
   const modeLabels: Record<ViewMode, string> = {
     overlay: "Overlay",
     swipe: "Swipe",
@@ -108,7 +111,10 @@ export default function MapToolbar({
       )}
 
       <div className="toolbar-stats">
-        <span>{heritageData.features.length} records</span>
+        <span>
+          {heritageData.features.length}
+          {hasTruncatedSource ? "+" : ""} records
+        </span>
         <span>{activeSources} live sources</span>
         {heritageData.error && <span className="degraded">Partial data</span>}
       </div>

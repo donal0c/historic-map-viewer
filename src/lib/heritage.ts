@@ -15,6 +15,7 @@ const MAX_HERITAGE_CACHE_ENTRIES = 96;
 
 interface HeritageCacheEntry {
   features: HeritageFeature[];
+  truncated: boolean;
   expiresAt: number;
   updatedAt: string;
 }
@@ -29,6 +30,7 @@ interface GeoJsonFeature {
 
 interface GeoJsonCollection {
   features?: GeoJsonFeature[];
+  exceededTransferLimit?: boolean;
 }
 
 const heritageCache = new Map<string, HeritageCacheEntry>();
@@ -122,6 +124,7 @@ export async function fetchHeritageData(
       sources[source.id] = {
         status: "ready",
         count: result.value.features.length,
+        truncated: result.value.truncated,
         updatedAt: result.value.updatedAt,
       };
       return;
@@ -283,10 +286,14 @@ async function fetchSource(
   )
     .then((collection) => {
       const updatedAt = new Date().toISOString();
+      const features = collection.features ?? [];
       const entry: HeritageCacheEntry = {
-        features: (collection.features ?? []).map((feature, index) =>
+        features: features.map((feature, index) =>
           normalizeFeature(source, feature, index),
         ),
+        truncated:
+          collection.exceededTransferLimit === true ||
+          features.length >= source.limit,
         updatedAt,
         expiresAt: Date.now() + HERITAGE_CACHE_TTL_MS,
       };

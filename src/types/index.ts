@@ -86,6 +86,7 @@ export interface HeritageSourceResult {
   status: "idle" | "loading" | "ready" | "error";
   count: number;
   total?: number;
+  truncated?: boolean;
   error?: string;
   updatedAt?: string;
 }

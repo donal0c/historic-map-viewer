@@ -38,6 +38,9 @@ export default function PlaceDossier({
   const layer = findLayer(state.activeLayerId, historicalLayers) ?? historicalLayers[0];
   const visibleFeatures = data.features.filter((feature) => feature.layer !== "zones");
   const highlights = visibleFeatures.slice(0, 7);
+  const hasTruncatedSource = Object.values(data.sources).some(
+    (source) => source?.truncated,
+  );
 
   useEffect(() => {
     if (selectedFeature) setSheetState("half");
@@ -117,7 +120,10 @@ export default function PlaceDossier({
 
       <div className="dossier-metrics">
         <Metric label="Radius" value={`${(data.radiusMeters / 1000).toFixed(1)} km`} />
-        <Metric label="Records" value={String(visibleFeatures.length)} />
+        <Metric
+          label="Records"
+          value={`${visibleFeatures.length}${hasTruncatedSource ? "+" : ""}`}
+        />
         <Metric label="Zoom" value={String(state.zoom)} />
       </div>
 

@@ -114,7 +114,9 @@ export default function LayerCatalogue({
                                 : result?.status === "error"
                                   ? "Source unavailable"
                                   : enabled.has(source.id)
-                                    ? `${result?.count ?? 0} in view`
+                                    ? result?.truncated
+                                      ? `First ${result.count} shown`
+                                      : `${result?.count ?? 0} in view`
                                     : source.description}
                           </small>
                         </span>
