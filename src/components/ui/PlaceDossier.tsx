@@ -1,30 +1,45 @@
-import type { HeritageData, HeritageFeature, MapState } from "../../types";
-import { HERITAGE_LAYER_LABELS } from "../../lib/heritage";
+import type {
+  HeritageData,
+  HeritageFeature,
+  HistoricalReadiness,
+  MapState,
+} from "../../types";
 import { findLayer, historicalLayers } from "../../config/layers";
+import { heritageSourceById } from "../../config/heritageSources";
 
 interface PlaceDossierProps {
   state: MapState;
   data: HeritageData;
   selectedFeature: HeritageFeature | null;
+  historicalReadiness: HistoricalReadiness;
   onSelectFeature: (feature: HeritageFeature) => void;
   onCloseFeature: () => void;
+  onShare: () => void;
 }
 
 export default function PlaceDossier({
   state,
   data,
   selectedFeature,
+  historicalReadiness,
   onSelectFeature,
   onCloseFeature,
+  onShare,
 }: PlaceDossierProps) {
   const layer = findLayer(state.activeLayerId, historicalLayers) ?? historicalLayers[0];
   const visibleFeatures = data.features.filter((feature) => feature.layer !== "zones");
   const highlights = visibleFeatures.slice(0, 7);
 
   return (
-    <aside className="place-dossier">
+    <aside
+      className={`place-dossier ${selectedFeature ? "has-selection" : ""}`}
+      aria-label="Current place and nearby evidence"
+    >
       <div className="dossier-header">
         <p className="eyebrow">Current view</p>
+        <button type="button" className="share-control" onClick={onShare}>
+          Share
+        </button>
         <h2>{state.center[0].toFixed(3)}, {state.center[1].toFixed(3)}</h2>
         <p>{layer.name}</p>
       </div>
@@ -35,10 +50,14 @@ export default function PlaceDossier({
         <Metric label="Zoom" value={String(state.zoom)} />
       </div>
 
-      <div className="dossier-status">
-        {data.status === "loading" && "Refreshing heritage layers..."}
-        {data.status === "error" && "Some public data is unavailable right now."}
-        {data.status === "ready" && "Live public heritage layers loaded."}
+      <div className="dossier-status" role="status" aria-live="polite">
+        <strong>{historicalReadiness.message}</strong>
+        <span>
+          {data.status === "loading" && "Refreshing heritage layers…"}
+          {data.status === "error" && "Enabled public sources are unavailable."}
+          {data.status === "ready" &&
+            (data.error ?? "Live public heritage layers loaded.")}
+        </span>
       </div>
 
       {selectedFeature ? (
@@ -46,7 +65,7 @@ export default function PlaceDossier({
       ) : (
         <div className="feature-empty">
           <strong>Select a marker</strong>
-          <span>Click any archaeology, architecture, or excavation marker to inspect its source record.</span>
+          <span>Select any visible point, route, or area to inspect its public source record.</span>
         </div>
       )}
 
@@ -62,7 +81,7 @@ export default function PlaceDossier({
             onClick={() => onSelectFeature(feature)}
             className={selectedFeature?.id === feature.id ? "active" : ""}
           >
-            <span>{HERITAGE_LAYER_LABELS[feature.layer]}</span>
+            <span>{heritageSourceById[feature.layer].shortName}</span>
             <strong>{feature.title}</strong>
             <em>{feature.subtitle}</em>
           </button>
@@ -96,7 +115,7 @@ function FeatureCard({
         ×
       </button>
       {feature.imageUrl && <img src={feature.imageUrl} alt="" />}
-      <span>{HERITAGE_LAYER_LABELS[feature.layer]}</span>
+      <span>{heritageSourceById[feature.layer].shortName}</span>
       <h3>{feature.title}</h3>
       <p className="feature-subtitle">{feature.subtitle}</p>
       {feature.detail && <p>{feature.detail}</p>}

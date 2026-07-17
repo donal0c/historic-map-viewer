@@ -3,3 +3,7 @@ dist
 *.local
 .DS_Store
 .netlify
+.vercel
+test-results
+playwright-report
+work/agent-mail

@@ -1,10 +1,16 @@
 import { useEffect, useRef } from "react";
-import type { MapState } from "../types";
-import { encodeHash, decodeHash } from "../lib/hash";
+import type { HeritageLayerId, MapState } from "../types";
+import {
+  decodeHash,
+  decodeHeritageSourceIds,
+  encodeHash,
+} from "../lib/hash";
 
 export function useHashSync(
   state: MapState,
-  setState: React.Dispatch<React.SetStateAction<MapState>>
+  setState: React.Dispatch<React.SetStateAction<MapState>>,
+  enabledSourceIds: HeritageLayerId[],
+  setEnabledSourceIds: React.Dispatch<React.SetStateAction<HeritageLayerId[]>>,
 ) {
   const isUpdatingFromHash = useRef(false);
   const isUpdatingHash = useRef(false);
@@ -15,7 +21,7 @@ export function useHashSync(
 
     isUpdatingHash.current = true;
     const timer = setTimeout(() => {
-      window.location.hash = encodeHash(state).slice(1); // remove leading #, browser adds it
+      window.location.hash = encodeHash(state, enabledSourceIds).slice(1);
       isUpdatingHash.current = false;
     }, 300);
 
@@ -23,7 +29,7 @@ export function useHashSync(
       clearTimeout(timer);
       isUpdatingHash.current = false;
     };
-  }, [state]);
+  }, [enabledSourceIds, state]);
 
   // Hash -> state
   useEffect(() => {
@@ -32,9 +38,11 @@ export function useHashSync(
 
       const decoded = decodeHash(window.location.hash);
       if (!decoded) return;
+      const decodedSources = decodeHeritageSourceIds(window.location.hash);
 
       isUpdatingFromHash.current = true;
       setState((prev) => ({ ...prev, ...decoded }));
+      if (decodedSources) setEnabledSourceIds(decodedSources);
 
       // Small delay to prevent circular update
       setTimeout(() => {
@@ -44,5 +52,5 @@ export function useHashSync(
 
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [setState]);
+  }, [setEnabledSourceIds, setState]);
 }

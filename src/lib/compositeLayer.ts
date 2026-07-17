@@ -1,193 +1,219 @@
 import L from "leaflet";
+import type { NlsEdition } from "../data/nlsCountyBounds";
+import { NLS_TILE_SIZE, nlsTileCandidates } from "./nlsResolver";
 
-const S3_BASE = "https://mapseries-tilesets.s3.amazonaws.com/os";
-const EMPTY_TILE_DATA_URL =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
-const TILE_TIMEOUT_MS = 3500;
-const PROBE_BATCH_SIZE = 4;
-const MAX_TILE_HINTS = 800;
-const MAX_RECENT_COUNTIES = 8;
+const TILE_TIMEOUT_MS = 5000;
+const RESULT_CACHE_LIMIT = 2400;
 
-// All Irish county tile set names on NLS S3
-const IRISH_COUNTIES_1ST = [
-  "antrim", "armagh", "carlow", "cavan", "clare", "cork", "donegal", "down",
-  "dublin", "fermanagh", "galway", "kerry", "kildare", "kilkenny", "kings",
-  "leitrim", "limerick", "londonderry", "longford", "louth", "mayo", "meath",
-  "monaghan", "queens", "roscommon", "sligo", "tipperary", "tyrone",
-  "waterford", "westmeath", "wexford", "wicklow",
-];
+export type NlsTileOutcomeKind = "available" | "empty" | "error";
 
-const IRISH_COUNTIES_2ND = IRISH_COUNTIES_1ST.map((c) => `${c}_2nd`);
-
-interface CountyCache {
-  recentCounties: string[];
-  tileHints: Map<string, string>;
+export interface NlsTileOutcome {
+  coords: L.Coords;
+  kind: NlsTileOutcomeKind;
+  loadedCount: number;
+  requestedCount: number;
 }
 
-const countyCaches: Record<"1st" | "2nd", CountyCache> = {
-  "1st": createCountyCache(),
-  "2nd": createCountyCache(),
-};
-
-function createCountyCache(): CountyCache {
-  return {
-    recentCounties: [],
-    tileHints: new Map(),
-  };
+interface CachedResult {
+  expiresAt: number;
+  series: string[];
 }
 
-function tileKey(z: number, x: number, y: number): string {
-  return `${z}/${x}/${y}`;
+const resultCache = new Map<string, CachedResult>();
+
+function tileKey(edition: NlsEdition, coords: L.Coords): string {
+  return `${edition}/${coords.z}/${coords.x}/${coords.y}`;
 }
 
-function rememberHint(cache: CountyCache, key: string, county: string) {
-  if (cache.tileHints.has(key)) {
-    cache.tileHints.delete(key);
+function getCachedSeries(key: string): string[] | undefined {
+  const cached = resultCache.get(key);
+  if (!cached) return undefined;
+  if (cached.expiresAt <= Date.now()) {
+    resultCache.delete(key);
+    return undefined;
   }
-  cache.tileHints.set(key, county);
-  if (cache.tileHints.size <= MAX_TILE_HINTS) return;
-
-  const oldestKey = cache.tileHints.keys().next().value;
-  if (oldestKey) cache.tileHints.delete(oldestKey);
+  resultCache.delete(key);
+  resultCache.set(key, cached);
+  return cached.series;
 }
 
-function rememberCounty(cache: CountyCache, county: string, coords: L.Coords) {
-  rememberHint(cache, tileKey(coords.z, coords.x, coords.y), county);
-
-  let x = coords.x;
-  let y = coords.y;
-  for (let z = coords.z - 1; z >= Math.max(coords.z - 2, 0); z -= 1) {
-    x = Math.floor(x / 2);
-    y = Math.floor(y / 2);
-    rememberHint(cache, tileKey(z, x, y), county);
+function setCachedSeries(key: string, series: string[], available: boolean) {
+  resultCache.set(key, {
+    series,
+    expiresAt: Date.now() + (available ? 30 * 60_000 : 5 * 60_000),
+  });
+  while (resultCache.size > RESULT_CACHE_LIMIT) {
+    const oldest = resultCache.keys().next().value;
+    if (!oldest) break;
+    resultCache.delete(oldest);
   }
-
-  cache.recentCounties = [
-    county,
-    ...cache.recentCounties.filter((value) => value !== county),
-  ].slice(0, MAX_RECENT_COUNTIES);
 }
 
-function orderedCounties(
-  counties: string[],
-  cache: CountyCache,
-  coords: L.Coords
-): string[] {
-  const preferred = new Set<string>();
-
-  const exact = cache.tileHints.get(tileKey(coords.z, coords.x, coords.y));
-  if (exact) preferred.add(exact);
-
-  let x = coords.x;
-  let y = coords.y;
-  for (let z = coords.z - 1; z >= Math.max(coords.z - 2, 0); z -= 1) {
-    x = Math.floor(x / 2);
-    y = Math.floor(y / 2);
-    const parentHint = cache.tileHints.get(tileKey(z, x, y));
-    if (parentHint) preferred.add(parentHint);
-  }
-
-  for (const county of cache.recentCounties) {
-    preferred.add(county);
-  }
-
-  const ranked = Array.from(preferred).filter((county) => counties.includes(county));
-  const leftovers = counties.filter((county) => !preferred.has(county));
-  return [...ranked, ...leftovers];
-}
-
-function countyUrl(county: string, coords: L.Coords): string {
-  return `${S3_BASE}/${county}/${coords.z}/${coords.x}/${coords.y}.png`;
-}
-
-/**
- * Creates a Leaflet TileLayer that composites tiles from multiple NLS
- * per-county tile sets. Each tile request races across all county URLs;
- * the first successful response wins. Failed requests (404) are ignored.
- */
 export function createCompositeCountyLayer(
-  edition: "1st" | "2nd",
-  options?: L.TileLayerOptions
-): L.TileLayer {
-  const counties = edition === "1st" ? IRISH_COUNTIES_1ST : IRISH_COUNTIES_2ND;
-  const cache = countyCaches[edition];
-
-  const layer = new L.TileLayer("", {
-    maxZoom: 16,
+  edition: NlsEdition,
+  options?: L.GridLayerOptions,
+): L.GridLayer {
+  const layer = new L.GridLayer({
     minZoom: 10,
+    maxZoom: 17,
+    tileSize: NLS_TILE_SIZE,
     attribution: 'Courtesy of <a href="https://maps.nls.uk/">NLS</a>',
+    updateWhenIdle: true,
+    keepBuffer: 1,
     ...options,
   });
 
-  // Override createTile to race across county URLs
-  (layer as any).createTile = function (
+  (
+    layer as L.GridLayer & {
+      createTile(
+        coords: L.Coords,
+        done: L.DoneCallback,
+      ): HTMLElement;
+    }
+  ).createTile = (
     coords: L.Coords,
-    done: (err: Error | null, tile: HTMLImageElement) => void
-  ): HTMLImageElement {
-    const tile = document.createElement("img");
-    tile.alt = "";
+    done: L.DoneCallback,
+  ): HTMLElement => {
+    const tile = document.createElement("div");
+    tile.className = "nls-composite-tile";
     tile.setAttribute("role", "presentation");
 
-    const { x, y, z } = coords;
-    void x;
-    void y;
-    void z;
-    const rankedCounties = orderedCounties(counties, cache, coords);
+    const key = tileKey(edition, coords);
+    const cachedSeries = getCachedSeries(key);
+    const candidates = cachedSeries
+      ? nlsTileCandidates(edition, coords).filter((candidate) =>
+          cachedSeries.includes(candidate.series),
+        )
+      : nlsTileCandidates(edition, coords);
+
+    if (candidates.length === 0) {
+      queueMicrotask(() => {
+        fireOutcome(layer, {
+          coords,
+          kind: "empty",
+          loadedCount: 0,
+          requestedCount: 0,
+        });
+        done(undefined, tile);
+      });
+      return tile;
+    }
 
     let settled = false;
-    const probes: HTMLImageElement[] = [];
-    let timeoutId = 0;
+    let finishedCount = 0;
+    const loadedSeries: string[] = [];
+    const images: HTMLImageElement[] = [];
 
-    const finish = (url?: string, county?: string) => {
+    const finish = (timedOut = false) => {
       if (settled) return;
       settled = true;
-      window.clearTimeout(timeoutId);
-      for (const probe of probes) probe.src = "";
-
-      if (url && county) {
-        rememberCounty(cache, county, coords);
-        tile.src = url;
-        done(null, tile);
-        return;
-      }
-
-      tile.src = EMPTY_TILE_DATA_URL;
-      done(null, tile);
+      window.clearTimeout(timeout);
+      const available = loadedSeries.length > 0;
+      setCachedSeries(key, loadedSeries, available);
+      fireOutcome(layer, {
+        coords,
+        kind: available ? "available" : timedOut ? "error" : "empty",
+        loadedCount: loadedSeries.length,
+        requestedCount: candidates.length,
+      });
+      done(undefined, tile);
     };
 
-    const probeBatch = (offset: number) => {
-      if (settled) return;
-      if (offset >= rankedCounties.length) {
-        finish();
-        return;
+    const timeout = window.setTimeout(() => {
+      for (const image of images) {
+        if (!image.complete) image.src = "";
       }
+      finish(true);
+    }, TILE_TIMEOUT_MS);
 
-      const batch = rankedCounties.slice(offset, offset + PROBE_BATCH_SIZE);
-      let pending = batch.length;
-
-      for (const county of batch) {
-        const url = countyUrl(county, coords);
-        const probe = new Image();
-        probe.crossOrigin = "anonymous";
-
-        probe.onload = () => finish(url, county);
-        probe.onerror = () => {
-          pending -= 1;
-          if (!settled && pending === 0) {
-            probeBatch(offset + PROBE_BATCH_SIZE);
-          }
-        };
-
-        probe.src = url;
-        probes.push(probe);
-      }
-    };
-
-    timeoutId = window.setTimeout(() => finish(), TILE_TIMEOUT_MS);
-    probeBatch(0);
+    for (const candidate of candidates) {
+      const image = document.createElement("img");
+      image.alt = "";
+      image.setAttribute("role", "presentation");
+      image.decoding = "async";
+      image.crossOrigin = "anonymous";
+      image.addEventListener(
+        "load",
+        async () => {
+          await removeBlackNodata(image);
+          loadedSeries.push(candidate.series);
+          finishedCount += 1;
+          if (finishedCount === candidates.length) finish();
+        },
+        { once: true },
+      );
+      image.addEventListener(
+        "error",
+        () => {
+          image.remove();
+          finishedCount += 1;
+          if (finishedCount === candidates.length) finish();
+        },
+        { once: true },
+      );
+      images.push(image);
+      tile.append(image);
+      image.src = candidate.url;
+    }
 
     return tile;
   };
 
   return layer;
+}
+
+function fireOutcome(layer: L.GridLayer, outcome: NlsTileOutcome) {
+  layer.fire("nlstileoutcome", outcome);
+}
+
+export function clearNlsTileResultCache() {
+  resultCache.clear();
+}
+
+async function removeBlackNodata(image: HTMLImageElement): Promise<void> {
+  const canvas = document.createElement("canvas");
+  canvas.width = NLS_TILE_SIZE;
+  canvas.height = NLS_TILE_SIZE;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return;
+
+  try {
+    context.drawImage(image, 0, 0, NLS_TILE_SIZE, NLS_TILE_SIZE);
+    const pixels = context.getImageData(0, 0, NLS_TILE_SIZE, NLS_TILE_SIZE);
+    clearBlackNodataPixels(pixels.data);
+    context.putImageData(pixels, 0, 0);
+    const blob = await canvasToBlob(canvas);
+    if (!blob) return;
+    const objectUrl = URL.createObjectURL(blob);
+    const processedImage = document.createElement("img");
+    processedImage.alt = "";
+    processedImage.setAttribute("role", "presentation");
+    processedImage.decoding = "async";
+    processedImage.addEventListener(
+      "load",
+      () => URL.revokeObjectURL(objectUrl),
+      { once: true },
+    );
+    processedImage.src = objectUrl;
+    image.replaceWith(processedImage);
+  } catch {
+    // If a provider ever drops CORS support, retain the source image so the
+    // readiness layer can still report an upstream rendering regression.
+  }
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+}
+
+export function clearBlackNodataPixels(pixels: Uint8ClampedArray) {
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (
+      pixels[index] === 0 &&
+      pixels[index + 1] === 0 &&
+      pixels[index + 2] === 0
+    ) {
+      pixels[index + 3] = 0;
+    }
+  }
 }

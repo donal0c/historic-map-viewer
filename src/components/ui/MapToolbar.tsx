@@ -17,11 +17,9 @@ export default function MapToolbar({
   onBasemapChange,
   onBlendModeChange,
 }: MapToolbarProps) {
-  const counts = {
-    smr: heritageData.features.filter((f) => f.layer === "smr").length,
-    niah: heritageData.features.filter((f) => f.layer === "niah").length,
-    excavations: heritageData.features.filter((f) => f.layer === "excavations").length,
-  };
+  const activeSources = Object.values(heritageData.sources).filter(
+    (source) => source?.status === "ready",
+  ).length;
   const modeLabels: Record<ViewMode, string> = {
     overlay: "Overlay",
     swipe: "Swipe",
@@ -89,9 +87,9 @@ export default function MapToolbar({
       )}
 
       <div className="toolbar-stats">
-        <span>{counts.smr} monuments</span>
-        <span>{counts.niah} buildings</span>
-        <span>{counts.excavations} digs</span>
+        <span>{heritageData.features.length} records</span>
+        <span>{activeSources} live sources</span>
+        {heritageData.error && <span className="degraded">Partial data</span>}
       </div>
     </section>
   );

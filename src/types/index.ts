@@ -9,7 +9,43 @@ export type BlendMode =
   | "overlay"
   | "soft-light";
 
-export type HeritageLayerId = "smr" | "niah" | "excavations" | "zones";
+export type HeritageLayerId =
+  | "smr"
+  | "zones"
+  | "urban-zones"
+  | "niah"
+  | "niah-footprints"
+  | "excavations"
+  | "holy-wells"
+  | "stone-circles"
+  | "rock-art"
+  | "sweathouses"
+  | "historic-graves"
+  | "wrecks"
+  | "defence"
+  | "martello-towers"
+  | "ww2-lookouts"
+  | "eire-signs"
+  | "workhouses"
+  | "disused-railways"
+  | "canals"
+  | "waterways"
+  | "historic-towns"
+  | "parks-gardens"
+  | "conservation-areas"
+  | "dublin-medieval"
+  | "monuments-to-visit"
+  | "community-monuments"
+  | "norman-settlements";
+
+export type HeritageGeometryKind = "point" | "line" | "polygon";
+
+export type HeritageCategoryId =
+  | "core"
+  | "sacred"
+  | "maritime-defence"
+  | "social-transport"
+  | "places";
 
 export interface SearchResult {
   id: string;
@@ -38,6 +74,15 @@ export interface HeritageData {
   error?: string;
   updatedAt?: string;
   radiusMeters: number;
+  sources: Partial<Record<HeritageLayerId, HeritageSourceResult>>;
+}
+
+export interface HeritageSourceResult {
+  status: "idle" | "loading" | "ready" | "error";
+  count: number;
+  total?: number;
+  error?: string;
+  updatedAt?: string;
 }
 
 export interface GeoJsonGeometry {
@@ -66,4 +111,23 @@ export interface MapState {
   opacity: number;
   mode: ViewMode;
   blendMode: BlendMode;
+}
+
+export type HistoricalLayerStatus =
+  | "idle"
+  | "unsupported-zoom"
+  | "loading"
+  | "available"
+  | "partial"
+  | "outside-coverage"
+  | "error";
+
+export interface HistoricalReadiness {
+  status: HistoricalLayerStatus;
+  layerId: string;
+  loadedTiles: number;
+  emptyTiles: number;
+  errorTiles: number;
+  requestedImages: number;
+  message: string;
 }

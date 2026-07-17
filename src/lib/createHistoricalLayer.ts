@@ -8,8 +8,8 @@ import { createCompositeCountyLayer } from "./compositeLayer";
  */
 export function createHistoricalLayer(
   config: TileLayerConfig,
-  extraOptions?: L.TileLayerOptions
-): L.TileLayer {
+  extraOptions?: L.GridLayerOptions
+): L.GridLayer {
   if (config.composite === "6inch-1st") {
     return createCompositeCountyLayer("1st", {
       ...extraOptions,

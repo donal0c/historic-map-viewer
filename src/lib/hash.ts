@@ -1,5 +1,11 @@
-import type { MapState, ViewMode, BlendMode } from "../types";
+import type {
+  BlendMode,
+  HeritageLayerId,
+  MapState,
+  ViewMode,
+} from "../types";
 import { historicalLayers, basemapLayers } from "../config/layers";
+import { heritageSources } from "../config/heritageSources";
 
 const VIEW_MODES: ViewMode[] = ["overlay", "swipe", "side-by-side", "spyglass"];
 const BLEND_MODES: BlendMode[] = [
@@ -10,7 +16,10 @@ const BLEND_MODES: BlendMode[] = [
   "soft-light",
 ];
 
-export function encodeHash(state: MapState): string {
+export function encodeHash(
+  state: MapState,
+  enabledSourceIds: HeritageLayerId[] = [],
+): string {
   const parts = [
     state.center[0].toFixed(5),
     state.center[1].toFixed(5),
@@ -20,8 +29,31 @@ export function encodeHash(state: MapState): string {
     state.opacity.toFixed(2),
     state.mode,
     state.blendMode,
+    encodeHeritageSourceIds(enabledSourceIds),
   ];
   return "#" + parts.join(",");
+}
+
+export function decodeHeritageSourceIds(hash: string): HeritageLayerId[] | null {
+  const encoded = hash.replace(/^#/, "").split(",")[8];
+  if (!encoded) return null;
+  const decoded = encoded
+    .split(".")
+    .map((value) => Number.parseInt(value, 36))
+    .filter(
+      (index) => Number.isInteger(index) && index >= 0 && index < heritageSources.length,
+    )
+    .map((index) => heritageSources[index]?.id)
+    .filter((id): id is HeritageLayerId => Boolean(id));
+  return decoded.length ? [...new Set(decoded)] : null;
+}
+
+function encodeHeritageSourceIds(sourceIds: HeritageLayerId[]): string {
+  const enabled = new Set(sourceIds);
+  return heritageSources
+    .map((source, index) => (enabled.has(source.id) ? index.toString(36) : null))
+    .filter((value): value is string => value !== null)
+    .join(".");
 }
 
 export function decodeHash(hash: string): Partial<MapState> | null {

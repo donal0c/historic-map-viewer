@@ -2,13 +2,15 @@ import { useCallback, useState } from "react";
 import type { LatLngTuple } from "leaflet";
 import type { MapState, ViewMode, BlendMode } from "../types";
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from "../config/map";
-import { historicalLayers, basemapLayers } from "../config/layers";
+import { basemapLayers } from "../config/layers";
 import { getInitialStateFromHash } from "../lib/hash";
 
 const initialState: MapState = {
   center: DEFAULT_CENTER,
   zoom: DEFAULT_ZOOM,
-  activeLayerId: historicalLayers[0].id,
+  // The all-Ireland one-inch sheet is useful at the opening zoom. The
+  // county-series six-inch sheets become available after a place search.
+  activeLayerId: "ireland-1inch-1st",
   basemapId: basemapLayers[0].id,
   opacity: 0.7,
   mode: "overlay",

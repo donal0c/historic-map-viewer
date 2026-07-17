@@ -1,0 +1,31 @@
+name: Public data contracts
+
+on:
+  schedule:
+    - cron: "17 8 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Probe all heritage sources
+        run: node scripts/probe-heritage-sources.mjs > heritage-contracts.json
+      - name: Probe representative historical tiles
+        run: node scripts/probe-historical-tiles.mjs > historical-tile-contracts.json
+      - name: Retain the actionable probe report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-data-contract-report
+          path: |
+            heritage-contracts.json
+            historical-tile-contracts.json
+          retention-days: 14
