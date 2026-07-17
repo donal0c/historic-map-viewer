@@ -24,7 +24,7 @@ The visual direction is a quiet archival instrument: the map is the dominant pla
 - A typed heritage registry describes provider, endpoint, geometry, fields, styling, zoom range, query limit, and attribution for every source.
 - Queries are lazy, abortable, debounced, independently cached, and independently degraded.
 - The mobile evidence inspector snaps between collapsed, half, and full states by drag or keyboard.
-- Production place search runs through a cacheable Vercel function that identifies the application to Nominatim.
+- Submit-only place search uses browser-identified Nominatim first, with a cacheable Vercel/Photon fallback when the primary public service is unavailable.
 
 MapGenie is deliberately excluded: its Tailte Éireann proxy services are restricted to the official viewer’s referrer and are not a public integration surface for this project.
 
