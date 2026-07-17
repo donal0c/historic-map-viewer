@@ -67,10 +67,15 @@ export default function App() {
 
   const handleSearchSelect = useCallback(
     (result: SearchResult) => {
-      setViewPosition([result.lat, result.lng], 14);
+      setState((current) => ({
+        ...current,
+        center: [result.lat, result.lng],
+        zoom: 14,
+        placeLabel: result.label,
+      }));
       setSelectedFeature(null);
     },
-    [setViewPosition]
+    [setState]
   );
 
   const handleHeritageSourcesChange = useCallback(
@@ -98,6 +103,7 @@ export default function App() {
 
       <div className="top-left-stack">
         <SearchPanel
+          placeLabel={state.placeLabel}
           onSelect={handleSearchSelect}
           onSearchStart={() => setSelectedFeature(null)}
         />

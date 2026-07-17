@@ -28,4 +28,9 @@ describe("share hash", () => {
       ),
     ).toBeNull();
   });
+
+  it("round-trips an optional searched place label", () => {
+    const labelled = { ...state, placeLabel: "Ballinasloe, County Galway" };
+    expect(decodeHash(encodeHash(labelled))).toEqual(labelled);
+  });
 });

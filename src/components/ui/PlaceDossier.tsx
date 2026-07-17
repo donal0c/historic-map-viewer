@@ -114,7 +114,10 @@ export default function PlaceDossier({
         <button type="button" className="share-control" onClick={onShare}>
           Share
         </button>
-        <h2>{state.center[0].toFixed(3)}, {state.center[1].toFixed(3)}</h2>
+        <h2>
+          {state.placeLabel ??
+            `${state.center[0].toFixed(3)}, ${state.center[1].toFixed(3)}`}
+        </h2>
         <p>{layer.name}</p>
       </div>
 

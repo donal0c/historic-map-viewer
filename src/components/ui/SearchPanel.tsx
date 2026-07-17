@@ -1,14 +1,19 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import type { SearchResult } from "../../types";
 import { searchPlaces } from "../../lib/heritage";
 
 interface SearchPanelProps {
+  placeLabel?: string;
   onSelect: (result: SearchResult) => void;
   onSearchStart?: () => void;
 }
 
-export default function SearchPanel({ onSelect, onSearchStart }: SearchPanelProps) {
-  const [query, setQuery] = useState("");
+export default function SearchPanel({
+  placeLabel,
+  onSelect,
+  onSearchStart,
+}: SearchPanelProps) {
+  const [query, setQuery] = useState(placeLabel ?? "");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [showCurated, setShowCurated] = useState(false);
   const [status, setStatus] = useState<"idle" | "searching" | "empty" | "error">(
@@ -20,6 +25,10 @@ export default function SearchPanel({ onSelect, onSearchStart }: SearchPanelProp
       : showCurated && query.trim().length === 0
         ? CURATED_PLACES
         : [];
+
+  useEffect(() => {
+    if (placeLabel) setQuery(placeLabel);
+  }, [placeLabel]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();

@@ -13,29 +13,25 @@ export function useHashSync(
   setEnabledSourceIds: React.Dispatch<React.SetStateAction<HeritageLayerId[]>>,
 ) {
   const isUpdatingFromHash = useRef(false);
-  const isUpdatingHash = useRef(false);
 
   // State -> hash (debounced)
   useEffect(() => {
     if (isUpdatingFromHash.current) return;
 
-    isUpdatingHash.current = true;
     const timer = setTimeout(() => {
-      window.location.hash = encodeHash(state, enabledSourceIds).slice(1);
-      isUpdatingHash.current = false;
+      window.history.replaceState(
+        null,
+        "",
+        encodeHash(state, enabledSourceIds),
+      );
     }, 300);
 
-    return () => {
-      clearTimeout(timer);
-      isUpdatingHash.current = false;
-    };
+    return () => clearTimeout(timer);
   }, [enabledSourceIds, state]);
 
   // Hash -> state
   useEffect(() => {
     const onHashChange = () => {
-      if (isUpdatingHash.current) return;
-
       const decoded = decodeHash(window.location.hash);
       if (!decoded) return;
       const decodedSources = decodeHeritageSourceIds(window.location.hash);

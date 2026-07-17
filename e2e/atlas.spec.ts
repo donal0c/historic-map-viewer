@@ -83,6 +83,49 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
 });
 
+test("searches for an Irish place and restores it from the share URL", async ({
+  page,
+}) => {
+  await mockPublicSources(page);
+  await page.route(/nominatim\.openstreetmap\.org\/search/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          place_id: 14583995,
+          display_name: "Ballinasloe, County Galway, Connacht, Ireland",
+          lat: "53.3302722",
+          lon: "-8.2213760",
+        },
+      ]),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "Search place" }).fill("Ballinasloe");
+  await page.getByRole("button", { name: "Search for place" }).click();
+  await expect(
+    page.getByRole("button", { name: /Ballinasloe, County Galway/ }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: /Ballinasloe, County Galway/ })
+    .click();
+
+  await expect(page.getByRole("textbox", { name: "Search place" })).toHaveValue(
+    "Ballinasloe, County Galway",
+  );
+  await expect(page).toHaveURL(/53\.33027,-8\.22138/);
+  await expect(page).toHaveURL(/Ballinasloe%2C%20County%20Galway/);
+
+  const sharedUrl = page.url();
+  await page.reload();
+  await expect(page).toHaveURL(sharedUrl);
+  await expect(page.getByRole("textbox", { name: "Search place" })).toHaveValue(
+    "Ballinasloe, County Galway",
+  );
+});
+
 test("keeps one map runtime and does not refetch evidence across modes", async ({
   page,
 }) => {

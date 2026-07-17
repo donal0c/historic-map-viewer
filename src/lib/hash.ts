@@ -30,6 +30,7 @@ export function encodeHash(
     state.mode,
     state.blendMode,
     encodeHeritageSourceIds(enabledSourceIds),
+    state.placeLabel ? encodeURIComponent(state.placeLabel) : "",
   ];
   return "#" + parts.join(",");
 }
@@ -89,6 +90,14 @@ export function decodeHash(hash: string): Partial<MapState> | null {
   }
   if (parts[7] && BLEND_MODES.includes(parts[7] as BlendMode)) {
     result.blendMode = parts[7] as BlendMode;
+  }
+  if (parts[9]) {
+    try {
+      const placeLabel = decodeURIComponent(parts[9]).trim();
+      if (placeLabel) result.placeLabel = placeLabel.slice(0, 160);
+    } catch {
+      // Malformed optional labels must not invalidate the map state.
+    }
   }
 
   return result;

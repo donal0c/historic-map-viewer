@@ -35,6 +35,14 @@ interface GeoJsonCollection {
 
 const heritageCache = new Map<string, HeritageCacheEntry>();
 const heritageRequests = new Map<string, Promise<HeritageCacheEntry>>();
+const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search";
+
+interface PlaceSearchRow {
+  place_id: number | string;
+  display_name: string;
+  lat: string | number;
+  lon: string | number;
+}
 
 export function radiusForZoom(zoom: number): number {
   if (zoom >= 16) return 800;
@@ -48,26 +56,32 @@ export async function searchPlaces(query: string): Promise<SearchResult[]> {
   const clean = query.trim();
   if (clean.length < 2) return [];
 
-  const params = new URLSearchParams({ q: clean });
-  const url = import.meta.env.DEV
-    ? `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
-        q: `${clean}, Ireland`,
-        format: "jsonv2",
-        addressdetails: "1",
-        limit: "6",
-        countrycodes: "ie",
-      })}`
-    : `/api/search?${params}`;
+  const nominatimUrl = `${NOMINATIM_SEARCH}?${new URLSearchParams({
+    q: `${clean}, Ireland`,
+    format: "jsonv2",
+    addressdetails: "1",
+    limit: "6",
+    countrycodes: "ie",
+  })}`;
 
-  const rows = await fetchJsonWithTimeout<
-    Array<{
-      place_id: number;
-      display_name: string;
-      lat: string;
-      lon: string;
-    }>
-  >(url, 7000);
+  let rows: PlaceSearchRow[];
+  try {
+    // A browser referrer identifies the app and avoids unreliable shared
+    // serverless egress. Search remains submit-only, never autocomplete.
+    rows = await fetchJsonWithTimeout<PlaceSearchRow[]>(nominatimUrl, 4500);
+  } catch {
+    rows = await fetchJsonWithTimeout<PlaceSearchRow[]>(
+      `/api/search?${new URLSearchParams({ q: clean })}`,
+      5000,
+    );
+  }
 
+  return normalisePlaceSearchRows(rows);
+}
+
+export function normalisePlaceSearchRows(
+  rows: PlaceSearchRow[],
+): SearchResult[] {
   return rows
     .map((row) => ({
       id: String(row.place_id),

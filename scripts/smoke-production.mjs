@@ -14,16 +14,22 @@ checks.push({
   latencyMs: home.latencyMs,
 });
 
-const search = await timedFetch(`${baseUrl}/api/search?q=Dublin`);
+// The probe query defeats the CDN cache so a stale success cannot hide a
+// provider or serverless-function failure.
+const search = await timedFetch(
+  `${baseUrl}/api/search?q=Dublin&probe=${Date.now()}`,
+);
 const rows = await search.response.json().catch(() => []);
 checks.push({
   name: "place search",
   ok:
     search.response.ok &&
+    search.response.headers.get("x-geocoder-provider") === "photon" &&
     Array.isArray(rows) &&
     rows.some((row) => String(row.display_name ?? "").includes("Dublin")),
   status: search.response.status,
   latencyMs: search.latencyMs,
+  provider: search.response.headers.get("x-geocoder-provider"),
 });
 
 console.log(

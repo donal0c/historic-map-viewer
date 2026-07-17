@@ -112,6 +112,7 @@ export interface TileLayerConfig {
 export interface MapState {
   center: LatLngTuple;
   zoom: number;
+  placeLabel?: string;
   activeLayerId: string;
   basemapId: string;
   opacity: number;
