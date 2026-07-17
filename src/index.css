@@ -1233,6 +1233,10 @@ select:focus-visible {
     transform: translateY(-50%);
   }
 
+  .app-shell.has-selection .layer-catalogue-shell {
+    top: calc(60vh - 152px);
+  }
+
   .layer-catalogue {
     position: fixed;
     top: auto;

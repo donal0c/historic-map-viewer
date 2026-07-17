@@ -86,7 +86,7 @@ export default function App() {
   );
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${selectedFeature ? " has-selection" : ""}`}>
       <MapShell
         state={state}
         heritageData={heritageData}

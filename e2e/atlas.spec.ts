@@ -70,7 +70,7 @@ test("keeps one map runtime and does not refetch evidence across modes", async (
   await page.getByRole("button", { name: "Close evidence layers" }).click();
   // Let React's development-only strict-effect replay settle before measuring
   // mode-induced network activity.
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(650);
   const settledRequests = requestCount();
 
   for (const mode of ["Swipe", "Side", "Lens", "Overlay"]) {
@@ -121,6 +121,15 @@ test("focuses selected evidence and opens the inspector", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Recorded site" })).toBeVisible();
   await expect(page.locator(".selected-evidence-marker")).toHaveCount(1);
+
+  if ((page.viewportSize()?.width ?? 0) <= 780) {
+    const triggerBox = await page.locator(".layer-catalogue-trigger").boundingBox();
+    const dossierBox = await page.locator(".place-dossier").boundingBox();
+
+    expect(triggerBox).not.toBeNull();
+    expect(dossierBox).not.toBeNull();
+    expect(triggerBox!.y + triggerBox!.height).toBeLessThan(dossierBox!.y);
+  }
 });
 
 test("restores compact share state and has no serious accessibility violations", async ({
