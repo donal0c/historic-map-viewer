@@ -9,7 +9,7 @@ Live site: [historicmapviewer.vercel.app](https://historicmapviewer.vercel.app)
 - Four comparison modes: Overlay, Swipe, Side-by-side, and Lens.
 - Six NLS historical series from the 1830s to the 1940s.
 - A 27-source, opt-in public heritage catalogue with six useful presets.
-- Point, route, and polygon evidence with an official-source inspector.
+- Clustered point, route, and polygon evidence with exact cross-source deduplication and an official-source inspector.
 - Curated starting places, place search, shareable map/evidence state, and responsive mobile sheets.
 - Honest layer readiness: loading, partial coverage, unsupported zoom, outside coverage, and upstream failure are distinct states.
 
@@ -23,6 +23,7 @@ The visual direction is a quiet archival instrument: the map is the dominant pla
 - Six-inch NLS tiles use a deterministic county-bounds resolver, bounded candidate fan-out, positive/negative caching, and black no-data pixel removal for correct county-edge compositing.
 - A typed heritage registry describes provider, endpoint, geometry, fields, styling, zoom range, query limit, and attribution for every source.
 - Queries are lazy, abortable, debounced, independently cached, and independently degraded.
+- The mobile evidence inspector snaps between collapsed, half, and full states by drag or keyboard.
 - Production place search runs through a cacheable Vercel function that identifies the application to Nominatim.
 
 MapGenie is deliberately excluded: its Tailte Éireann proxy services are restricted to the official viewer’s referrer and are not a public integration surface for this project.
@@ -53,6 +54,8 @@ pnpm check             # unit/contract tests and production build
 pnpm test:e2e          # deterministic desktop/mobile Chromium journeys
 pnpm probe:sources     # live metadata + GeoJSON sample for all 27 sources
 pnpm probe:tiles       # live representative checks for all six map series
+pnpm budget            # enforce the 180 KB gzip initial-JS budget
+pnpm smoke:production  # public document + production search smoke
 pnpm check:all
 ```
 

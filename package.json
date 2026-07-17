@@ -12,7 +12,9 @@
     "test:e2e": "playwright test",
     "probe:sources": "node scripts/probe-heritage-sources.mjs",
     "probe:tiles": "node scripts/probe-historical-tiles.mjs",
-    "check": "pnpm test && pnpm build",
+    "budget": "node scripts/check-bundle-budget.mjs",
+    "smoke:production": "node scripts/smoke-production.mjs",
+    "check": "pnpm test && pnpm build && pnpm budget",
     "check:all": "pnpm check && pnpm test:e2e"
   },
   "dependencies": {

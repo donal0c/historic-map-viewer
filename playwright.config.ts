@@ -5,6 +5,8 @@ export default defineConfig({
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   reporter: "line",
+  snapshotPathTemplate:
+    "{testDir}/{testFilePath}-snapshots/{arg}-{projectName}{ext}",
   use: {
     baseURL: "http://127.0.0.1:5173",
     trace: "retain-on-failure",
@@ -22,6 +24,14 @@ export default defineConfig({
         deviceScaleFactor: 1,
         hasTouch: true,
         isMobile: true,
+      },
+    },
+    {
+      name: "tablet",
+      use: {
+        viewport: { width: 768, height: 1024 },
+        deviceScaleFactor: 1,
+        hasTouch: true,
       },
     },
   ],

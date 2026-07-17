@@ -10,9 +10,7 @@ import type {
 import { IRELAND_BOUNDS } from "../../config/map";
 import { basemapLayers, findLayer, historicalLayers } from "../../config/layers";
 import { createHistoricalLayer } from "../../lib/createHistoricalLayer";
-import {
-  addHeritageLayerToMap,
-} from "../../lib/mapHeritageLayer";
+import { addHeritageLayerToMap } from "../../lib/mapHeritageLayer";
 import type { NlsTileOutcome } from "../../lib/compositeLayer";
 import { heritageSourceById } from "../../config/heritageSources";
 
@@ -356,12 +354,22 @@ export default function MapRuntime({
 
   useEffect(() => {
     if (state.mode !== "side-by-side") {
+      const hadSecondaryMap = Boolean(secondaryMapRef.current);
       secondaryMapRef.current?.remove();
       secondaryMapRef.current = null;
       secondaryBasemapRef.current = null;
       secondaryHistoricalRef.current = null;
       secondaryHeritageRef.current = null;
-      window.setTimeout(() => primaryMapRef.current?.invalidateSize(), 0);
+      if (hadSecondaryMap) {
+        const resizeTimer = window.setTimeout(() => {
+          const primary = primaryMapRef.current;
+          if (!primary) return;
+          synchronizingMapsRef.current = true;
+          primary.invalidateSize({ pan: false });
+          synchronizingMapsRef.current = false;
+        }, 0);
+        return () => window.clearTimeout(resizeTimer);
+      }
       return;
     }
 
@@ -377,6 +385,7 @@ export default function MapRuntime({
     }).setView(state.center, state.zoom);
     createPanes(secondary);
     secondaryMapRef.current = secondary;
+    let readyForUserMovement = false;
 
     const syncPrimary = () => {
       if (synchronizingMapsRef.current) return;
@@ -384,7 +393,9 @@ export default function MapRuntime({
       const center = secondary.getCenter();
       primary.setView(center, secondary.getZoom(), { animate: false });
       synchronizingMapsRef.current = false;
-      publishView();
+    };
+    const publishSecondaryView = () => {
+      if (readyForUserMovement) publishView();
     };
     const syncSecondary = () => {
       if (synchronizingMapsRef.current) return;
@@ -395,14 +406,23 @@ export default function MapRuntime({
       synchronizingMapsRef.current = false;
     };
     secondary.on("move", syncPrimary);
+    secondary.on("moveend", publishSecondaryView);
     primary.on("move", syncSecondary);
-    window.setTimeout(() => {
-      primary.invalidateSize();
-      secondary.invalidateSize();
+    const initializationTimer = window.setTimeout(() => {
+      synchronizingMapsRef.current = true;
+      primary.invalidateSize({ pan: false });
+      secondary.invalidateSize({ pan: false });
+      secondary.setView(primary.getCenter(), primary.getZoom(), {
+        animate: false,
+      });
+      synchronizingMapsRef.current = false;
+      readyForUserMovement = true;
     }, 0);
 
     return () => {
+      window.clearTimeout(initializationTimer);
       secondary.off("move", syncPrimary);
+      secondary.off("moveend", publishSecondaryView);
       primary.off("move", syncSecondary);
       secondary.remove();
       secondaryMapRef.current = null;

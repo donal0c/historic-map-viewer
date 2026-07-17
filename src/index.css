@@ -172,6 +172,30 @@ select:focus-visible {
   filter: drop-shadow(0 3px 6px rgba(20, 23, 18, 0.25));
 }
 
+.heritage-cluster {
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 250, 240, 0.95);
+  border-radius: 50%;
+  color: #fffdf4;
+  background:
+    radial-gradient(circle at 35% 30%, #398d79 0 18%, transparent 19%),
+    conic-gradient(from 40deg, #b44d31, #227b80, #916f2f, #b44d31);
+  box-shadow: 0 5px 15px rgba(20, 23, 18, 0.33);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.heritage-cluster span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(28, 33, 28, 0.88);
+}
+
 .selected-evidence-marker {
   filter: drop-shadow(0 0 9px rgba(255, 250, 235, 0.95));
 }
@@ -377,6 +401,10 @@ select:focus-visible {
 .compare-segmented,
 .basemap-segmented {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.compare-mobile {
+  display: none;
 }
 
 .segmented button {
@@ -804,10 +832,35 @@ select:focus-visible {
   text-decoration: none;
 }
 
+.feature-related {
+  display: grid;
+  gap: 5px;
+  margin-top: 5px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  color: #62675e;
+  font-size: 9px;
+}
+
+.feature-related > strong {
+  color: #74786e;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.feature-related > span {
+  line-height: 1.4;
+}
+
 .feature-close {
   position: absolute;
   top: 11px;
   right: 0;
+}
+
+.sheet-handle {
+  display: none;
 }
 
 .feature-list {
@@ -1206,6 +1259,62 @@ select:focus-visible {
     display: none;
   }
 
+  .compare-desktop {
+    display: none;
+  }
+
+  .compare-mobile {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(76px, 0.8fr);
+    gap: 3px;
+  }
+
+  .compare-primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compare-more {
+    position: relative;
+    min-width: 0;
+  }
+
+  .compare-more summary {
+    display: flex;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 7px;
+    color: #aeb4aa;
+    font-size: 10px;
+    font-weight: 750;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .compare-more summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .compare-more summary.active,
+  .compare-more summary:hover {
+    color: var(--ink);
+    background: var(--paper-bright);
+  }
+
+  .compare-more > .segmented {
+    position: absolute;
+    top: 39px;
+    right: 0;
+    z-index: 1200;
+    grid-template-columns: repeat(2, 82px);
+    border: 1px solid rgba(245, 240, 226, 0.14);
+    padding: 4px;
+    background: var(--ink);
+    box-shadow: var(--shadow);
+  }
+
   .segmented {
     border: 0;
     padding: 0;
@@ -1262,6 +1371,64 @@ select:focus-visible {
     max-height: 40vh;
     border-radius: 16px;
     padding: 15px;
+  }
+
+  .sheet-handle {
+    display: grid;
+    min-height: 25px;
+    place-items: center;
+    gap: 4px;
+    margin: -10px 0 5px;
+    color: var(--ink);
+    outline-offset: 2px;
+    touch-action: none;
+    cursor: ns-resize;
+  }
+
+  .sheet-handle > span {
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: #b8b8ad;
+  }
+
+  .sheet-handle > strong {
+    display: none;
+    max-width: 80%;
+    overflow: hidden;
+    font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .place-dossier.sheet-collapsed {
+    max-height: 58px;
+    overflow: hidden;
+    padding-block: 15px 9px;
+  }
+
+  .place-dossier.sheet-collapsed > :not(.sheet-handle) {
+    display: none;
+  }
+
+  .place-dossier.sheet-collapsed .sheet-handle {
+    min-height: 34px;
+    margin-bottom: 0;
+  }
+
+  .place-dossier.sheet-collapsed .sheet-handle > strong {
+    display: block;
+  }
+
+  .place-dossier.sheet-full {
+    max-height: calc(100vh - 164px);
+  }
+
+  .app-shell:has(.place-dossier.sheet-full) .layer-catalogue-shell {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .place-dossier.has-selection .dossier-metrics,
@@ -1328,10 +1495,6 @@ select:focus-visible {
     --lens-radius: 104px;
   }
 
-  .compare-segmented button:nth-child(3),
-  .compare-segmented button:nth-child(4) {
-    color: #92998e;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

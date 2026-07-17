@@ -1,0 +1,61 @@
+{
+  "viewport": [
+    390,
+    844
+  ],
+  "map": {
+    "display": "block",
+    "rect": [
+      0,
+      0,
+      390,
+      844
+    ],
+    "background": "rgba(0, 0, 0, 0)",
+    "radius": "0px"
+  },
+  "atlasBar": {
+    "display": "block",
+    "rect": [
+      10,
+      10,
+      370,
+      132
+    ],
+    "background": "rgb(28, 33, 28)",
+    "radius": "15px"
+  },
+  "dossier": {
+    "display": "none",
+    "rect": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "background": "rgb(251, 248, 239)",
+    "radius": "18px"
+  },
+  "evidenceTrigger": {
+    "display": "grid",
+    "rect": [
+      10,
+      368,
+      38,
+      141
+    ],
+    "background": "rgb(251, 248, 239)",
+    "radius": "12px"
+  },
+  "timeline": {
+    "display": "flex",
+    "rect": [
+      8,
+      784,
+      374,
+      52
+    ],
+    "background": "rgb(251, 248, 239)",
+    "radius": "14px"
+  }
+}

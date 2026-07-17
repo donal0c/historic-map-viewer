@@ -140,7 +140,7 @@ export async function fetchHeritageData(
   }
 
   return {
-    features: sortFeatures(features, lat, lng),
+    features: sortFeatures(deduplicateHeritageFeatures(features), lat, lng),
     status: failures === visibleSources.length ? "error" : "ready",
     error:
       failures > 0
@@ -150,6 +150,102 @@ export async function fetchHeritageData(
     radiusMeters,
     sources,
   };
+}
+
+const SMR_RELATED_SOURCES = new Set<HeritageLayerId>([
+  "smr",
+  "holy-wells",
+  "stone-circles",
+  "rock-art",
+  "sweathouses",
+  "monuments-to-visit",
+  "norman-settlements",
+]);
+
+export function deduplicateHeritageFeatures(
+  features: HeritageFeature[],
+): HeritageFeature[] {
+  const unique = new Map<string, HeritageFeature>();
+
+  for (const feature of features) {
+    const key = sharedRecordKey(feature);
+    if (!key) {
+      unique.set(`feature:${feature.id}`, feature);
+      continue;
+    }
+
+    const existing = unique.get(key);
+    if (!existing) {
+      unique.set(key, feature);
+      continue;
+    }
+
+    const preferred =
+      featureRichness(feature) > featureRichness(existing) ? feature : existing;
+    const related = preferred === feature ? existing : feature;
+    unique.set(key, {
+      ...preferred,
+      relatedRecords: mergeRelatedRecords(
+        preferred.relatedRecords,
+        related,
+        related.relatedRecords,
+      ),
+    });
+  }
+
+  return [...unique.values()];
+}
+
+function sharedRecordKey(feature: HeritageFeature): string | undefined {
+  if (!SMR_RELATED_SOURCES.has(feature.layer)) return undefined;
+  const identifier = firstValue(feature.raw, [
+    "SMRS",
+    "SMR_Number",
+    "SMR_No_",
+    "SMR",
+    "RMP_NO",
+    "MONUMENT_NO",
+  ]);
+  if (!identifier) return undefined;
+  const normalized = identifier.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return normalized
+    ? `smr:${normalized}:${feature.geometry.type.toLowerCase()}`
+    : undefined;
+}
+
+function featureRichness(feature: HeritageFeature): number {
+  return (
+    (feature.detail?.length ?? 0) +
+    (feature.subtitle?.length ?? 0) +
+    (feature.imageUrl ? 80 : 0) +
+    (feature.sourceUrl ? 40 : 0) +
+    (feature.layer === "smr" ? 10 : 0)
+  );
+}
+
+function mergeRelatedRecords(
+  current: HeritageFeature["relatedRecords"],
+  related: HeritageFeature,
+  nested: HeritageFeature["relatedRecords"],
+): NonNullable<HeritageFeature["relatedRecords"]> {
+  const records = [
+    ...(current ?? []),
+    {
+      layer: related.layer,
+      title: related.title,
+      sourceUrl: related.sourceUrl,
+    },
+    ...(nested ?? []),
+  ];
+  return records.filter(
+    (record, index) =>
+      records.findIndex(
+        (candidate) =>
+          candidate.layer === record.layer &&
+          candidate.title === record.title &&
+          candidate.sourceUrl === record.sourceUrl,
+      ) === index,
+  );
 }
 
 async function fetchSource(

@@ -32,24 +32,45 @@ export default function MapToolbar({
     dark: "Dark",
     satellite: "Sat",
   };
+  const renderModeButton = (mode: (typeof viewModes)[number]) => (
+    <button
+      key={mode.id}
+      type="button"
+      className={state.mode === mode.id ? "active" : ""}
+      onClick={() => onModeChange(mode.id)}
+      title={mode.description}
+    >
+      <span aria-hidden="true">{mode.icon}</span>
+      <span>{modeLabels[mode.id]}</span>
+    </button>
+  );
 
   return (
     <section className="map-toolbar">
       <div className="toolbar-group">
         <span className="toolbar-label">Compare</span>
-        <div className="segmented compare-segmented">
-          {viewModes.map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              className={state.mode === mode.id ? "active" : ""}
-              onClick={() => onModeChange(mode.id)}
-              title={mode.description}
-            >
-              <span aria-hidden="true">{mode.icon}</span>
-              <span>{modeLabels[mode.id]}</span>
-            </button>
-          ))}
+        <div className="segmented compare-segmented compare-desktop">
+          {viewModes.map(renderModeButton)}
+        </div>
+        <div className="compare-mobile">
+          <div className="segmented compare-primary">
+            {viewModes.slice(0, 2).map(renderModeButton)}
+          </div>
+          <details className="compare-more">
+            <summary className={state.mode === "side-by-side" || state.mode === "spyglass" ? "active" : ""}>
+              <span aria-hidden="true">•••</span>
+              <span>
+                {state.mode === "side-by-side"
+                  ? "Side"
+                  : state.mode === "spyglass"
+                    ? "Lens"
+                    : "More"}
+              </span>
+            </summary>
+            <div className="segmented">
+              {viewModes.slice(2).map(renderModeButton)}
+            </div>
+          </details>
         </div>
       </div>
 

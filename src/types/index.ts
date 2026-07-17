@@ -66,6 +66,11 @@ export interface HeritageFeature {
   coordinates?: [number, number];
   raw: Record<string, unknown>;
   geometry: GeoJsonGeometry;
+  relatedRecords?: Array<{
+    layer: HeritageLayerId;
+    title: string;
+    sourceUrl?: string;
+  }>;
 }
 
 export interface HeritageData {

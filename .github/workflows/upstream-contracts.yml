@@ -20,6 +20,8 @@ jobs:
         run: node scripts/probe-heritage-sources.mjs > heritage-contracts.json
       - name: Probe representative historical tiles
         run: node scripts/probe-historical-tiles.mjs > historical-tile-contracts.json
+      - name: Smoke production
+        run: node scripts/smoke-production.mjs > production-smoke.json
       - name: Retain the actionable probe report
         if: always()
         uses: actions/upload-artifact@v4
@@ -28,4 +30,5 @@ jobs:
           path: |
             heritage-contracts.json
             historical-tile-contracts.json
+            production-smoke.json
           retention-days: 14
