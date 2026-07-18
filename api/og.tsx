@@ -1,6 +1,6 @@
 import { ImageResponse } from "@vercel/og";
 import React from "react";
-import { atlasStories } from "../src/data/stories";
+import { atlasStories } from "../src/data/stories.js";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);

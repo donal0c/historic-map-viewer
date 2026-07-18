@@ -3,7 +3,7 @@ import {
   type ContextCandidate,
   type PlaceContext,
   type PlaceContextImage,
-} from "../src/lib/placeContext";
+} from "../src/lib/placeContext.js";
 
 const WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php";
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
