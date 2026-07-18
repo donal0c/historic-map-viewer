@@ -21,6 +21,7 @@
     "check:all": "pnpm check && pnpm test:e2e"
   },
   "dependencies": {
+    "@vercel/og": "^0.11.1",
     "leaflet": "^1.9.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

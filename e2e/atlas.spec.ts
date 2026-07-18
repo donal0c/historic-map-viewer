@@ -12,6 +12,14 @@ async function mockPublicSources(
 ) {
   let heritageRequests = 0;
 
+  await page.route("**/api/og?*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      body: TRANSPARENT_PNG,
+    });
+  });
+
   await page.route(/(tile\.openstreetmap|basemaps\.cartocdn|server\.arcgisonline|mapseries-tilesets)/, async (route) => {
     await route.fulfill({
       status: 200,
@@ -688,6 +696,126 @@ test("keeps the welcome atlas and guided story free of serious accessibility vio
   expect(await seriousViolations()).toEqual([]);
 });
 
+test("loads attributed place context only on request and creates a state-aware share card", async ({
+  page,
+}) => {
+  await mockPublicSources(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          window.__copiedShareUrl = value;
+        },
+      },
+    });
+  });
+  let contextRequests = 0;
+  await page.route("**/api/context?*", async (route) => {
+    contextRequests += 1;
+    const named = new URL(route.request().url()).searchParams.has("label");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        context: {
+          title: "Dublin",
+          summary: "Dublin is the capital and largest city of Ireland.",
+          pageUrl: "https://en.wikipedia.org/wiki/Dublin",
+          wikidataUrl: "https://www.wikidata.org/wiki/Q1761",
+          distanceMeters: 840,
+          matchedBy: named ? "name" : "proximity",
+          image: {
+            url: "https://upload.wikimedia.org/test.jpg",
+            sourceUrl: "https://commons.wikimedia.org/wiki/File:Test.jpg",
+            artist: "Test photographer",
+            licence: "CC BY-SA 4.0",
+            licenceUrl: "https://creativecommons.org/licenses/by-sa/4.0",
+          },
+        },
+      }),
+    });
+  });
+
+  await page.goto(
+    "/#53.34380,-6.26750,14,6inch-1st,light,0.76,overlay,multiply,0.3,Dublin",
+  );
+  await page.getByRole("button", {
+    name: "Open evidence summary for the current view",
+  }).click();
+  expect(contextRequests).toBe(0);
+  await page.getByRole("button", { name: "Add context" }).click();
+  await expect(
+    page.getByRole("region", { name: "A wider historical context" })
+      .getByRole("heading", { name: "Dublin", exact: true }),
+  ).toBeVisible();
+  expect(contextRequests).toBe(1);
+  await expect(page.getByText("Context only — not part of the mapped heritage evidence."))
+    .toBeVisible();
+  await expect(page.getByText("Place-name match")).toBeVisible();
+  await expect(page.getByRole("link", { name: "CC BY-SA 4.0" })).toHaveAttribute(
+    "href",
+    "https://creativecommons.org/licenses/by-sa/4.0",
+  );
+
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Share this view" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".share-card-rendered")).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Explore Dublin through time" }))
+    .toBeVisible();
+  const cardUrl = await dialog.getByRole("link", { name: "Open card" })
+    .getAttribute("href");
+  expect(cardUrl).not.toBeNull();
+  const card = new URL(cardUrl!);
+  expect(card.pathname).toBe("/api/og");
+  expect(card.searchParams.get("layer")).toContain("1829–1842");
+  expect(card.searchParams.get("mode")).toBe("Overlay");
+  expect(card.searchParams.get("target")).toBeNull();
+  await dialog.getByRole("button", { name: "Copy designed link" }).click();
+  const copiedUrl = new URL(
+    await page.evaluate(() => window.__copiedShareUrl),
+  );
+  expect(copiedUrl.pathname).toBe("/share");
+  expect(copiedUrl.searchParams.get("target")).toContain(
+    "#53.34380,-6.26750,14,6inch-1st",
+  );
+  await expect(page.locator(".map-runtime")).toHaveAttribute("inert", "");
+
+  await page.addScriptTag({ content: axe.source });
+  const serious = await page.evaluate(async () => {
+    const results = await window.axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+    return results.violations.filter((violation) =>
+      ["serious", "critical"].includes(violation.impact ?? ""),
+    );
+  });
+  expect(serious).toEqual([]);
+
+  const sheet = await page.locator(".share-sheet").boundingBox();
+  expect(sheet).not.toBeNull();
+  expect(sheet!.x).toBeGreaterThanOrEqual(0);
+  expect(sheet!.x + sheet!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect(sheet!.y + sheet!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+
+  await page.getByRole("button", { name: "Close sharing" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator(".map-runtime")).not.toHaveAttribute("inert", "");
+
+  await page.goto(
+    "/?proximity=1#53.34380,-6.26750,14,6inch-1st,light,0.76,overlay,multiply,0.3",
+  );
+  await page.getByRole("button", {
+    name: "Open evidence summary for the current view",
+  }).click();
+  await page.getByRole("button", { name: "Add context" }).click();
+  await expect(page.getByText("Nearest notable page · 840 m")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Context near this point" }),
+  ).toBeVisible();
+});
+
 test("clusters dense points and renders route and area evidence", async ({
   page,
 }) => {
@@ -786,5 +914,6 @@ test("matches the responsive atlas visual contract", async ({ page }, testInfo) 
 declare global {
   interface Window {
     axe: typeof axe;
+    __copiedShareUrl: string;
   }
 }

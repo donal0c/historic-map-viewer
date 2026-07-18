@@ -32,6 +32,52 @@ checks.push({
   provider: search.response.headers.get("x-geocoder-provider"),
 });
 
+const context = await timedFetch(
+  `${baseUrl}/api/context?lat=53.3438&lng=-6.2675&label=Dublin&probe=${Date.now()}`,
+);
+const contextBody = await context.response.json().catch(() => ({}));
+checks.push({
+  name: "attributed place context",
+  ok:
+    context.response.ok &&
+    context.response.headers.get("x-context-provider") === "wikipedia" &&
+    contextBody.context?.title === "Dublin" &&
+    String(contextBody.context?.pageUrl ?? "").includes("wikipedia.org/wiki/Dublin"),
+  status: context.response.status,
+  latencyMs: context.latencyMs,
+  provider: context.response.headers.get("x-context-provider"),
+});
+
+const card = await timedFetch(
+  `${baseUrl}/api/og?title=Explore+Dublin&layer=6-Inch+1st+Edition&mode=Overlay`,
+);
+const cardBytes = await card.response.arrayBuffer();
+checks.push({
+  name: "designed share card",
+  ok:
+    card.response.ok &&
+    card.response.headers.get("content-type")?.startsWith("image/png") &&
+    cardBytes.byteLength > 10_000,
+  status: card.response.status,
+  latencyMs: card.latencyMs,
+  bytes: cardBytes.byteLength,
+});
+
+const share = await timedFetch(
+  `${baseUrl}/share?title=Explore+Dublin&description=Historic+map+view&target=%2F%23smoke`,
+);
+const shareHtml = await share.response.text();
+checks.push({
+  name: "state-aware share route",
+  ok:
+    share.response.ok &&
+    shareHtml.includes('property="og:title" content="Explore Dublin"') &&
+    shareHtml.includes("/api/og?") &&
+    shareHtml.includes("/#smoke"),
+  status: share.response.status,
+  latencyMs: share.latencyMs,
+});
+
 console.log(
   JSON.stringify(
     {

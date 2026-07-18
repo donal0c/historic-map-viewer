@@ -13,7 +13,9 @@ Live site: [historicmapviewer.vercel.app](https://historicmapviewer.vercel.app)
 - A complete evidence register with source, type, geometry, distance, grouping, provenance, and per-source health controls.
 - Filtered GeoJSON and CSV view-snapshot exports that retain query scope, source identifiers, original links, and incomplete-source warnings.
 - A visual atlas entry with six curated places, optional on-device geolocation, and three guided historical stories.
-- Fast Irish/English townland autocomplete, recent searches, explicit external place fallback, and shareable map, evidence, and story-step state.
+- Fast Irish/English townland autocomplete, recent searches, and explicit external place fallback.
+- On-demand, confidently matched Wikipedia/Wikidata place context with per-image Wikimedia Commons licensing and a clear separation from mapped heritage evidence.
+- Designed share links that preserve map, evidence, comparison, and story-step state, with deterministic 1200×630 social cards and curated historical map crops.
 - Honest layer readiness: loading, partial coverage, unsupported zoom, outside coverage, and upstream failure are distinct states.
 
 The visual direction is a quiet archival instrument: the map is the dominant plane, while a matte atlas frame, parchment inspector, restrained type, and an oxidised-green accent carry the interaction.
@@ -31,6 +33,8 @@ The visual direction is a quiet archival instrument: the map is the dominant pla
 - Autocomplete uses a versioned local index generated from the Tailte Éireann National Placenames Gazetteer. The index is split into lazy initial-letter chunks and never delays the opening map.
 - Submit-only external search uses browser-identified Nominatim first, with a cacheable Vercel/Photon fallback when the primary public service is unavailable.
 - Guided stories are data definitions rather than bespoke pages: each step controls the map view, historical edition, comparison mode, evidence sources, editorial caption, provenance note, and deep link.
+- Place context is user-triggered, abortable, edge-cached, and rejected when name/proximity confidence is weak; it never joins the map-move request fan-out.
+- Share landing pages and social cards are derived from bounded URL/story metadata. They do not boot Leaflet or query live heritage providers.
 
 MapGenie is deliberately excluded: its Tailte Éireann proxy services are restricted to the official viewer’s referrer and are not a public integration surface for this project.
 
@@ -44,7 +48,7 @@ The catalogue combines:
 - Wreck Inventory of Ireland, defence heritage, Martello towers, WWII lookout posts, and Éire signs.
 - Workhouses, disused railways, canals, and navigable waterways.
 
-Historical map tiles are provided by the National Library of Scotland. Basemaps come from OpenStreetMap, CARTO, and Esri. Every third-party source remains subject to its own licensing, uptime, and attribution requirements; this is an exploratory atlas, not a legal or statutory assessment.
+Historical map tiles are provided by the National Library of Scotland. Basemaps come from OpenStreetMap, CARTO, and Esri. Optional contextual summaries come from Wikipedia/Wikidata; any displayed image is attributed to its Wikimedia Commons author and item-specific licence. Every third-party source remains subject to its own licensing, uptime, and attribution requirements; this is an exploratory atlas, not a legal or statutory assessment.
 
 The local townland index contains Tailte Éireann National Placenames Gazetteer data licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Regenerate the committed index with `pnpm build:places`; the script reads the public ArcGIS FeatureServer and records its source and licence in `public/data/places/manifest.json`.
 
@@ -64,14 +68,14 @@ pnpm probe:sources     # live metadata + GeoJSON sample for all 27 sources
 pnpm probe:tiles       # live representative checks for all six map series
 pnpm build:places      # regenerate the licensed local townland index
 pnpm budget            # enforce the 180 KB gzip initial-JS budget
-pnpm smoke:production  # public document + production search smoke
+pnpm smoke:production  # document, search, context, share route, and card smoke
 pnpm check:all
 ```
 
 ## Repository shape
 
 ```text
-api/                   Vercel place-search function
+api/                   Vercel search, context, share-page, and image functions
 e2e/                   deterministic browser and accessibility journeys
 scripts/               live public-data probes and placename index builder
 src/data/              guided atlas stories and curated destinations

@@ -32,6 +32,7 @@ export async function GET(request: Request): Promise<Response> {
   const query =
     new URL(request.url, "https://historicmapviewer.vercel.app").searchParams
       .get("q")
+      ?.replace(/\+/g, " ")
       ?.trim() ?? "";
   if (query.length < 2 || query.length > 120) {
     return Response.json({ error: "Enter at least two characters" }, { status: 400 });

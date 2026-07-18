@@ -13,6 +13,7 @@ import type {
 } from "../../types";
 import { findLayer, historicalLayers } from "../../config/layers";
 import { heritageSourceById } from "../../config/heritageSources";
+import PlaceContext from "./PlaceContext";
 
 interface PlaceDossierProps {
   state: MapState;
@@ -191,10 +192,16 @@ export default function PlaceDossier({
       {selectedFeature ? (
         <FeatureCard feature={selectedFeature} onClose={onCloseFeature} large />
       ) : (
-        <div className="feature-empty">
-          <strong>Select a marker</strong>
-          <span>Select any visible point, route, or area to inspect its public source record.</span>
-        </div>
+        <>
+          <div className="feature-empty">
+            <strong>Select a marker</strong>
+            <span>Select any visible point, route, or area to inspect its public source record.</span>
+          </div>
+          <PlaceContext
+            center={[state.center[0], state.center[1]]}
+            placeLabel={state.placeLabel}
+          />
+        </>
       )}
 
       <div className="feature-list">

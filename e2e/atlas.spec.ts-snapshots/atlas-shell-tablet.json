@@ -26,15 +26,15 @@
     "radius": "15px"
   },
   "dossier": {
-    "display": "none",
+    "display": "grid",
     "rect": [
-      0,
-      0,
-      0,
-      0
+      574,
+      226,
+      184,
+      79
     ],
     "background": "rgba(255, 252, 243, 0.95)",
-    "radius": "16px"
+    "radius": "12px"
   },
   "evidenceTrigger": {
     "display": "grid",

@@ -15,9 +15,11 @@ import LayerCatalogue from "./components/ui/LayerCatalogue";
 import ExplorePanel from "./components/ui/ExplorePanel";
 import StoryPlayer from "./components/ui/StoryPlayer";
 import EvidenceBrowser from "./components/ui/EvidenceBrowser";
+import ShareSheet from "./components/ui/ShareSheet";
 import { defaultHeritageSourceIds } from "./config/heritageSources";
 import { decodeHeritageSourceIds } from "./lib/hash";
 import { featureRepresentativeCoordinates } from "./lib/evidenceBrowser";
+import { buildShareDescriptor } from "./lib/share";
 import {
   atlasDestinations,
   atlasStories,
@@ -63,6 +65,7 @@ export default function App() {
   );
   const [dossierOpen, setDossierOpen] = useState(false);
   const [evidenceBrowserOpen, setEvidenceBrowserOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [activeStoryRoute, setActiveStoryRoute] = useState(() =>
     readStoryRoute(window.location.search),
   );
@@ -108,6 +111,21 @@ export default function App() {
   );
 
   const showOpacity = state.mode === "overlay" || state.mode === "spyglass";
+  const activeStory = activeStoryRoute
+    ? atlasStories.find((story) => story.id === activeStoryRoute.storyId)
+    : undefined;
+  const shareDescriptor = useMemo(
+    () =>
+      buildShareDescriptor({
+        state,
+        enabledSources: stableEnabledSources,
+        story: activeStory,
+        stepIndex: activeStoryRoute?.stepIndex,
+        origin: window.location.origin,
+        pathname: window.location.pathname,
+      }),
+    [activeStory, activeStoryRoute?.stepIndex, stableEnabledSources, state],
+  );
 
   const applyStoryStep = useCallback(
     (storyId: string, stepIndex: number) => {
@@ -282,6 +300,10 @@ export default function App() {
     setEvidenceBrowserOpen(false);
   }, []);
 
+  const closeShare = useCallback(() => {
+    setShareOpen(false);
+  }, []);
+
   const openExplore = useCallback(() => {
     pauseTimeLapse("Time travel paused while Explore is open.");
     setSelectedFeature(null);
@@ -323,12 +345,12 @@ export default function App() {
   );
 
   return (
-    <div className={`app-shell${selectedFeature ? " has-selection" : ""}${activeStoryRoute ? " has-story" : ""}${exploreOpen ? " has-explore" : ""}${dossierOpen ? " dossier-expanded" : ""}${evidenceBrowserOpen ? " has-evidence-browser" : ""}`}>
+    <div className={`app-shell${selectedFeature ? " has-selection" : ""}${activeStoryRoute ? " has-story" : ""}${exploreOpen ? " has-explore" : ""}${dossierOpen ? " dossier-expanded" : ""}${evidenceBrowserOpen ? " has-evidence-browser" : ""}${shareOpen ? " has-share-sheet" : ""}`}>
       <MapShell
         state={state}
         heritageData={heritageData}
         selectedFeature={selectedFeature}
-        interactionDisabled={evidenceBrowserOpen}
+        interactionDisabled={evidenceBrowserOpen || shareOpen}
         preloadHistoricalLayerId={preloadLayerId}
         onViewChange={handleViewChange}
         onSelectFeature={handleSelectFeature}
@@ -381,7 +403,7 @@ export default function App() {
           stepIndex={activeStoryRoute.stepIndex}
           onStepChange={changeStoryStep}
           onExit={() => leaveStory()}
-          onShare={() => void shareCurrentView()}
+          onShare={() => setShareOpen(true)}
         />
       )}
 
@@ -400,7 +422,7 @@ export default function App() {
         onSelectFeature={handleSelectFeature}
         onCloseFeature={() => setSelectedFeature(null)}
         onBrowseEvidence={openEvidenceBrowser}
-        onShare={() => void shareCurrentView()}
+        onShare={() => setShareOpen(true)}
       />
 
       <LayerCatalogue
@@ -420,6 +442,12 @@ export default function App() {
         selectedFeature={selectedFeature}
         onClose={closeEvidenceBrowser}
         onSelectFeature={handleEvidenceSelect}
+      />
+
+      <ShareSheet
+        open={shareOpen}
+        descriptor={shareDescriptor}
+        onClose={closeShare}
       />
 
       <TimelineRail
@@ -447,23 +475,6 @@ export default function App() {
       )}
     </div>
   );
-}
-
-async function shareCurrentView() {
-  const shareData = {
-    title: "Historic Map Viewer",
-    text: "Explore this Irish place across historical maps and public heritage records.",
-    url: window.location.href,
-  };
-  try {
-    if (navigator.share) {
-      await navigator.share(shareData);
-      return;
-    }
-    await navigator.clipboard.writeText(shareData.url);
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") return;
-  }
 }
 
 function restoreEnabledSources(): HeritageLayerId[] {
