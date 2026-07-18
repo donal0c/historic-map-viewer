@@ -529,7 +529,11 @@ export default function MapRuntime({
   return (
     <div
       ref={shellRef}
-      className={`map-runtime map-runtime-${state.mode}`}
+      className={`map-runtime map-runtime-${state.mode}${
+        state.zoom <= 8 && state.mode === "overlay"
+          ? " map-runtime-national-overview"
+          : ""
+      }`}
       data-testid="map-runtime"
     >
       <div

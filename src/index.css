@@ -106,6 +106,33 @@ select:focus-visible {
   inset: 0;
 }
 
+.map-runtime-national-overview .leaflet-historical-pane {
+  width: 100vw;
+  height: 100vh;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 8%,
+    rgba(0, 0, 0, 0.08) 16%,
+    rgba(0, 0, 0, 0.82) 26%,
+    #000 34%,
+    #000 64%,
+    rgba(0, 0, 0, 0.82) 72%,
+    rgba(0, 0, 0, 0.08) 82%,
+    transparent 91%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 8%,
+    rgba(0, 0, 0, 0.08) 16%,
+    rgba(0, 0, 0, 0.82) 26%,
+    #000 34%,
+    #000 64%,
+    rgba(0, 0, 0, 0.82) 72%,
+    rgba(0, 0, 0, 0.08) 82%,
+    transparent 91%
+  );
+}
+
 .map-runtime-side-by-side .map-runtime-primary,
 .map-runtime-side-by-side .map-runtime-secondary {
   width: 50%;
@@ -1644,9 +1671,18 @@ select:focus-visible {
 }
 
 .has-explore .explore-panel {
-  top: 112px;
+  top: 142px;
   width: min(880px, calc(100vw - 140px));
-  max-height: calc(100vh - 130px);
+  max-height: calc(100vh - 160px);
+}
+
+@media (min-width: 781px) {
+  .app-shell:not(.has-explore):not(.has-story) .top-left-stack {
+    border-color: rgba(245, 240, 226, 0.18);
+    background: rgba(28, 33, 28, 0.8);
+    box-shadow: 0 16px 42px rgba(17, 19, 15, 0.2);
+    backdrop-filter: blur(16px) saturate(0.82);
+  }
 }
 
 .opacity-control {

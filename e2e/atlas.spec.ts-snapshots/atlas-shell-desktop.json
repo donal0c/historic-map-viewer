@@ -22,7 +22,7 @@
       1006,
       146
     ],
-    "background": "rgb(28, 33, 28)",
+    "background": "rgba(28, 33, 28, 0.8)",
     "radius": "18px"
   },
   "dossier": {
