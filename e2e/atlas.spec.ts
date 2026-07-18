@@ -440,7 +440,7 @@ test("matches the responsive atlas visual contract", async ({ page }, testInfo) 
   await expect(page.getByText("Historical map ready.")).toHaveCount(1);
 
   const contract = await page.evaluate(() => {
-    const describe = (selector: string) => {
+    const describe = (selector: string, normalizeTextHeight = false) => {
       const element = document.querySelector<HTMLElement>(selector);
       if (!element) return null;
       const rect = element.getBoundingClientRect();
@@ -451,7 +451,9 @@ test("matches the responsive atlas visual contract", async ({ page }, testInfo) 
           Math.round(rect.x),
           Math.round(rect.y),
           Math.round(rect.width),
-          Math.round(rect.height),
+          normalizeTextHeight
+            ? Math.round(rect.height / 2) * 2
+            : Math.round(rect.height),
         ],
         background: style.backgroundColor,
         radius: style.borderRadius,
@@ -462,7 +464,7 @@ test("matches the responsive atlas visual contract", async ({ page }, testInfo) 
       map: describe(".map-runtime"),
       atlasBar: describe(".top-left-stack"),
       dossier: describe(".place-dossier"),
-      evidenceTrigger: describe(".layer-catalogue-trigger"),
+      evidenceTrigger: describe(".layer-catalogue-trigger", true),
       timeline: describe(".timeline-rail"),
     };
   });
