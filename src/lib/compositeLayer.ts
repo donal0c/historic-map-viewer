@@ -1,9 +1,18 @@
 import L from "leaflet";
 import type { NlsEdition } from "../data/nlsCountyBounds";
 import { NLS_TILE_SIZE, nlsTileCandidates } from "./nlsResolver";
+import {
+  cacheNodataTile,
+  getCachedNodataTile,
+  processNodataImage,
+} from "./nodataProcessor";
+export { clearBlackNodataPixels } from "./nodataPixels";
 
 const TILE_TIMEOUT_MS = 5000;
 const RESULT_CACHE_LIMIT = 2400;
+const RESULT_CACHE_STORAGE_KEY = "historic-map-viewer:nls-results:v1";
+const AVAILABLE_CACHE_TTL_MS = 30 * 60_000;
+const EMPTY_CACHE_TTL_MS = 5 * 60_000;
 
 export type NlsTileOutcomeKind = "available" | "empty" | "error";
 
@@ -20,12 +29,16 @@ interface CachedResult {
 }
 
 const resultCache = new Map<string, CachedResult>();
+const tileAbortControllers = new WeakMap<HTMLElement, AbortController>();
+let resultCacheHydrated = false;
+let persistTimer: number | undefined;
 
 function tileKey(edition: NlsEdition, coords: L.Coords): string {
   return `${edition}/${coords.z}/${coords.x}/${coords.y}`;
 }
 
 function getCachedSeries(key: string): string[] | undefined {
+  hydrateResultCache();
   const cached = resultCache.get(key);
   if (!cached) return undefined;
   if (cached.expiresAt <= Date.now()) {
@@ -38,15 +51,19 @@ function getCachedSeries(key: string): string[] | undefined {
 }
 
 function setCachedSeries(key: string, series: string[], available: boolean) {
+  hydrateResultCache();
   resultCache.set(key, {
     series,
-    expiresAt: Date.now() + (available ? 30 * 60_000 : 5 * 60_000),
+    expiresAt:
+      Date.now() +
+      (available ? AVAILABLE_CACHE_TTL_MS : EMPTY_CACHE_TTL_MS),
   });
   while (resultCache.size > RESULT_CACHE_LIMIT) {
     const oldest = resultCache.keys().next().value;
     if (!oldest) break;
     resultCache.delete(oldest);
   }
+  scheduleResultCachePersistence();
 }
 
 export function createCompositeCountyLayer(
@@ -61,6 +78,10 @@ export function createCompositeCountyLayer(
     updateWhenIdle: true,
     keepBuffer: 1,
     ...options,
+  });
+  layer.on("tileunload", (event: L.TileEvent) => {
+    tileAbortControllers.get(event.tile)?.abort();
+    tileAbortControllers.delete(event.tile);
   });
 
   (
@@ -77,6 +98,8 @@ export function createCompositeCountyLayer(
     const tile = document.createElement("div");
     tile.className = "nls-composite-tile";
     tile.setAttribute("role", "presentation");
+    const controller = new AbortController();
+    tileAbortControllers.set(tile, controller);
 
     const key = tileKey(edition, coords);
     const cachedSeries = getCachedSeries(key);
@@ -108,6 +131,7 @@ export function createCompositeCountyLayer(
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
+      if (timedOut) controller.abort();
       const available = loadedSeries.length > 0;
       setCachedSeries(key, loadedSeries, available);
       fireOutcome(layer, {
@@ -126,34 +150,32 @@ export function createCompositeCountyLayer(
       finish(true);
     }, TILE_TIMEOUT_MS);
 
+    const settleCandidate = (series: string, available: boolean) => {
+      if (settled) return;
+      if (available) loadedSeries.push(series);
+      finishedCount += 1;
+      if (finishedCount === candidates.length) finish();
+    };
+
     for (const candidate of candidates) {
       const image = document.createElement("img");
       image.alt = "";
       image.setAttribute("role", "presentation");
       image.decoding = "async";
       image.crossOrigin = "anonymous";
-      image.addEventListener(
-        "load",
-        async () => {
-          await removeBlackNodata(image);
-          loadedSeries.push(candidate.series);
-          finishedCount += 1;
-          if (finishedCount === candidates.length) finish();
-        },
-        { once: true },
-      );
-      image.addEventListener(
-        "error",
-        () => {
-          image.remove();
-          finishedCount += 1;
-          if (finishedCount === candidates.length) finish();
-        },
-        { once: true },
-      );
       images.push(image);
       tile.append(image);
-      image.src = candidate.url;
+      void loadCandidate(
+        image,
+        candidate.url,
+        controller.signal,
+      ).then(
+        () => settleCandidate(candidate.series, true),
+        () => {
+          image.remove();
+          settleCandidate(candidate.series, false);
+        },
+      );
     }
 
     return tile;
@@ -167,53 +189,143 @@ function fireOutcome(layer: L.GridLayer, outcome: NlsTileOutcome) {
 }
 
 export function clearNlsTileResultCache() {
+  if (persistTimer !== undefined) window.clearTimeout(persistTimer);
+  persistTimer = undefined;
   resultCache.clear();
-}
-
-async function removeBlackNodata(image: HTMLImageElement): Promise<void> {
-  const canvas = document.createElement("canvas");
-  canvas.width = NLS_TILE_SIZE;
-  canvas.height = NLS_TILE_SIZE;
-  const context = canvas.getContext("2d", { willReadFrequently: true });
-  if (!context) return;
-
+  resultCacheHydrated = true;
   try {
-    context.drawImage(image, 0, 0, NLS_TILE_SIZE, NLS_TILE_SIZE);
-    const pixels = context.getImageData(0, 0, NLS_TILE_SIZE, NLS_TILE_SIZE);
-    clearBlackNodataPixels(pixels.data);
-    context.putImageData(pixels, 0, 0);
-    const blob = await canvasToBlob(canvas);
-    if (!blob) return;
-    const objectUrl = URL.createObjectURL(blob);
-    const processedImage = document.createElement("img");
-    processedImage.alt = "";
-    processedImage.setAttribute("role", "presentation");
-    processedImage.decoding = "async";
-    processedImage.addEventListener(
-      "load",
-      () => URL.revokeObjectURL(objectUrl),
-      { once: true },
-    );
-    processedImage.src = objectUrl;
-    image.replaceWith(processedImage);
+    localStorage.removeItem(RESULT_CACHE_STORAGE_KEY);
   } catch {
-    // If a provider ever drops CORS support, retain the source image so the
-    // readiness layer can still report an upstream rendering regression.
+    // Storage is optional.
   }
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
-  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+async function loadCandidate(
+  image: HTMLImageElement,
+  sourceUrl: string,
+  signal: AbortSignal,
+): Promise<void> {
+  const cached = await getCachedNodataTile(sourceUrl);
+  if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+  if (cached) {
+    await showBlob(image, cached, signal);
+    return;
+  }
+
+  await loadImage(image, sourceUrl, signal);
+  try {
+    const blob = await processNodataImage(image, NLS_TILE_SIZE, signal);
+    if (!blob) return;
+    void cacheNodataTile(sourceUrl, blob);
+    await showBlob(image, blob, signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    // If a provider ever drops CORS support or a browser cannot process the
+    // pixels, retain the source image. Readiness still reports it as loaded.
+  }
 }
 
-export function clearBlackNodataPixels(pixels: Uint8ClampedArray) {
-  for (let index = 0; index < pixels.length; index += 4) {
-    if (
-      pixels[index] === 0 &&
-      pixels[index + 1] === 0 &&
-      pixels[index + 2] === 0
-    ) {
-      pixels[index + 3] = 0;
+function loadImage(
+  image: HTMLImageElement,
+  sourceUrl: string,
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      signal.removeEventListener("abort", handleAbort);
+      image.removeEventListener("load", handleLoad);
+      image.removeEventListener("error", handleError);
+    };
+    const handleLoad = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error("Historical map image unavailable"));
+    };
+    const handleAbort = () => {
+      cleanup();
+      if (!image.complete) image.src = "";
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    image.addEventListener("load", handleLoad, { once: true });
+    image.addEventListener("error", handleError, { once: true });
+    signal.addEventListener("abort", handleAbort, { once: true });
+    image.src = sourceUrl;
+  });
+}
+
+function showBlob(
+  image: HTMLImageElement,
+  blob: Blob,
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(blob);
+    const cleanup = () => {
+      URL.revokeObjectURL(objectUrl);
+      signal.removeEventListener("abort", handleAbort);
+      image.removeEventListener("load", handleLoad);
+      image.removeEventListener("error", handleError);
+    };
+    const handleLoad = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error("Processed historical map image unavailable"));
+    };
+    const handleAbort = () => {
+      cleanup();
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    image.addEventListener("load", handleLoad, { once: true });
+    image.addEventListener("error", handleError, { once: true });
+    signal.addEventListener("abort", handleAbort, { once: true });
+    image.src = objectUrl;
+  });
+}
+
+function hydrateResultCache() {
+  if (resultCacheHydrated) return;
+  resultCacheHydrated = true;
+  try {
+    const serialized = localStorage.getItem(RESULT_CACHE_STORAGE_KEY);
+    if (!serialized) return;
+    const entries = JSON.parse(serialized) as Array<[string, CachedResult]>;
+    const now = Date.now();
+    for (const [key, value] of entries) {
+      if (
+        value.expiresAt > now &&
+        Array.isArray(value.series) &&
+        resultCache.size < RESULT_CACHE_LIMIT
+      ) {
+        resultCache.set(key, value);
+      }
+    }
+  } catch {
+    try {
+      localStorage.removeItem(RESULT_CACHE_STORAGE_KEY);
+    } catch {
+      // Storage is optional.
     }
   }
+}
+
+function scheduleResultCachePersistence() {
+  if (persistTimer !== undefined) return;
+  persistTimer = window.setTimeout(() => {
+    persistTimer = undefined;
+    try {
+      const now = Date.now();
+      const entries = [...resultCache.entries()].filter(
+        ([, value]) => value.expiresAt > now,
+      );
+      localStorage.setItem(RESULT_CACHE_STORAGE_KEY, JSON.stringify(entries));
+    } catch {
+      // Storage is optional and can be unavailable under privacy settings.
+    }
+  }, 150);
 }
