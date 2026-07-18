@@ -14,6 +14,7 @@
     "probe:tiles": "node scripts/probe-historical-tiles.mjs",
     "build:places": "node scripts/build-place-index.mjs",
     "measure:performance": "node scripts/measure-performance.mjs",
+    "measure:time-lapse": "node scripts/measure-time-lapse.mjs",
     "budget": "node scripts/check-bundle-budget.mjs",
     "smoke:production": "node scripts/smoke-production.mjs",
     "check": "pnpm test && pnpm build && pnpm budget",

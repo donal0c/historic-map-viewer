@@ -12,9 +12,11 @@ interface MapShellProps {
   heritageData: HeritageData;
   selectedFeature: HeritageFeature | null;
   interactionDisabled?: boolean;
+  preloadHistoricalLayerId?: string | null;
   onViewChange: (center: LatLngTuple, zoom: number) => void;
   onSelectFeature: (feature: HeritageFeature) => void;
   onHistoricalStatusChange: (readiness: HistoricalReadiness) => void;
+  onHistoricalPreloadStatusChange?: (readiness: HistoricalReadiness) => void;
 }
 
 export default function MapShell(props: MapShellProps) {

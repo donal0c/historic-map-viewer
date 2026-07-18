@@ -183,6 +183,12 @@ select:focus-visible {
   font-size: 9px !important;
 }
 
+.leaflet-control-attribution a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 1px;
+}
+
 .leaflet-tooltip {
   border: 1px solid rgba(44, 50, 41, 0.13);
   border-radius: 6px;
@@ -2150,7 +2156,7 @@ select:focus-visible {
 .has-evidence-browser .place-dossier,
 .has-evidence-browser .layer-catalogue-shell,
 .has-evidence-browser .story-player,
-.has-evidence-browser .timeline-rail,
+.has-evidence-browser .timeline-console,
 .has-evidence-browser .opacity-control,
 .has-evidence-browser .map-legend {
   opacity: 0;
@@ -2160,15 +2166,131 @@ select:focus-visible {
 
 /* Timeline and exposure */
 
-.timeline-rail {
+.timeline-console {
   position: absolute;
   right: 50%;
   bottom: 16px;
   z-index: 1030;
+  width: min(820px, calc(100vw - 480px));
+  transform: translateX(50%);
+}
+
+.time-lapse-player {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  width: min(510px, 100%);
+  min-height: 58px;
+  margin: 0 auto 7px;
+  overflow: hidden;
+  border: 1px solid rgba(42, 47, 38, 0.19);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--paper-bright) 96%, transparent);
+  box-shadow: 0 13px 34px rgba(17, 20, 15, 0.21);
+  backdrop-filter: blur(12px);
+}
+
+.time-lapse-play {
+  align-self: stretch;
+  border: 0;
+  border-right: 1px solid var(--line);
+  color: #fffaf0;
+  background: var(--vermilion);
+  cursor: pointer;
+}
+
+.time-lapse-play:hover:not(:disabled) {
+  background: #8f3f29;
+}
+
+.time-lapse-play:disabled {
+  color: #7d8177;
+  background: var(--paper-muted);
+  cursor: not-allowed;
+}
+
+.time-lapse-play span {
+  display: inline-block;
+  font-size: 13px;
+  transform: translateX(1px);
+}
+
+.timeline-console[data-playback-state="playing"] .time-lapse-play span {
+  transform: none;
+}
+
+.time-lapse-edition {
+  min-width: 0;
+  padding: 8px 13px 7px;
+}
+
+.time-lapse-edition > span {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--vermilion);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.time-lapse-edition strong,
+.time-lapse-edition small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time-lapse-edition strong {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.time-lapse-edition small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.time-lapse-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 8px;
+}
+
+.time-lapse-actions button,
+.time-lapse-actions select {
+  min-width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink-soft);
+  background: transparent;
+  cursor: pointer;
+}
+
+.time-lapse-actions button:hover,
+.time-lapse-actions select:hover {
+  background: #ece7dc;
+}
+
+.time-lapse-actions select {
+  min-width: 72px;
+  padding: 0 22px 0 8px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.timeline-rail {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(6, minmax(82px, 1fr));
-  width: min(760px, calc(100vw - 480px));
-  transform: translateX(50%);
+  width: 100%;
   overflow: hidden;
   border: 1px solid rgba(42, 47, 38, 0.18);
   border-radius: 14px;
@@ -2225,7 +2347,7 @@ select:focus-visible {
 .has-explore .dossier-peek,
 .has-explore .place-dossier,
 .has-explore .layer-catalogue-shell,
-.has-explore .timeline-rail,
+.has-explore .timeline-console,
 .has-explore .opacity-control,
 .has-explore .map-legend {
   opacity: 0;
@@ -2234,6 +2356,10 @@ select:focus-visible {
 }
 
 .has-explore .map-toolbar {
+  display: none;
+}
+
+.has-story .timeline-console {
   display: none;
 }
 
@@ -2254,7 +2380,7 @@ select:focus-visible {
 
 .opacity-control {
   position: absolute;
-  bottom: 70px;
+  bottom: 146px;
   left: 50%;
   z-index: 1020;
   display: grid;
@@ -2454,8 +2580,8 @@ select:focus-visible {
     width: 308px;
   }
 
-  .timeline-rail {
-    width: min(690px, calc(100vw - 400px));
+  .timeline-console {
+    width: min(720px, calc(100vw - 400px));
   }
 }
 
@@ -2472,7 +2598,7 @@ select:focus-visible {
     max-height: 38vh;
   }
 
-  .timeline-rail {
+  .timeline-console {
     right: auto;
     left: 70px;
     width: calc(100vw - 420px);
@@ -2815,12 +2941,8 @@ select:focus-visible {
   }
 
   .timeline-rail {
-    right: 8px;
-    bottom: 8px;
-    left: 8px;
     display: flex;
-    width: auto;
-    transform: none;
+    width: 100%;
     overflow-x: auto;
     justify-content: flex-start;
     scrollbar-width: none;
@@ -2848,8 +2970,37 @@ select:focus-visible {
     flex: 0 0 84px;
   }
 
+  .timeline-console {
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    transform: none;
+  }
+
+  .time-lapse-player {
+    width: 100%;
+    min-height: 54px;
+    margin-bottom: 5px;
+  }
+
+  .time-lapse-edition {
+    padding-right: 7px;
+    padding-left: 10px;
+  }
+
+  .time-lapse-actions {
+    padding-right: 5px;
+  }
+
+  .time-lapse-actions select {
+    min-width: 64px;
+    padding-right: 18px;
+    padding-left: 5px;
+  }
+
   .opacity-control {
-    bottom: 64px;
+    bottom: 128px;
     grid-template-columns: minmax(90px, 150px) 30px;
     gap: 7px;
     padding: 7px 10px;
@@ -2949,6 +3100,7 @@ select:focus-visible {
 
   .has-story .place-dossier,
   .has-story .layer-catalogue-shell,
+  .has-story .timeline-console,
   .has-story .opacity-control {
     display: none;
   }
@@ -2970,7 +3122,7 @@ select:focus-visible {
   .has-explore .dossier-peek,
   .has-explore .place-dossier,
   .has-explore .layer-catalogue-shell,
-  .has-explore .timeline-rail,
+  .has-explore .timeline-console,
   .has-explore .opacity-control,
   .has-explore .map-legend {
     display: none;

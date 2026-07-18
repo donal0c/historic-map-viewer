@@ -27,9 +27,9 @@ export const historicalLayers: TileLayerConfig[] = [
   },
   {
     id: "ireland-1inch-1st",
-    name: "1-Inch 1st Edition (Hills)",
+    name: "1-Inch Ireland (1859–1917)",
     description:
-      "OS Ireland One-Inch (1:63,360) 1st edition with hill shading. All-Ireland coverage.",
+      "OS Ireland One-Inch (1:63,360) engraved topographic series, published 1859–1917, with hill shading. All-Ireland coverage.",
     url: "https://mapseries-tilesets.s3.amazonaws.com/os/ireland_1inch_1st_hills/{z}/{x}/{y}.png",
     attribution:
       'Courtesy of <a href="https://maps.nls.uk/">NLS</a>',
@@ -37,9 +37,9 @@ export const historicalLayers: TileLayerConfig[] = [
   },
   {
     id: "ireland-1inch-2nd",
-    name: "1-Inch 2nd Edition (Contours)",
+    name: "1-Inch 2nd Edition (1898–1902)",
     description:
-      "OS Ireland One-Inch (1:63,360) 2nd edition with contour lines. All-Ireland coverage.",
+      "OS Ireland One-Inch (1:63,360) 2nd edition, published 1898–1902, with contour lines. All-Ireland coverage.",
     url: "https://mapseries-tilesets.s3.amazonaws.com/os/ireland_1inch_2nd_contours/{z}/{x}/{y}.png",
     attribution:
       'Courtesy of <a href="https://maps.nls.uk/">NLS</a>',
@@ -47,9 +47,9 @@ export const historicalLayers: TileLayerConfig[] = [
   },
   {
     id: "gsgs4136",
-    name: "War Office 1-Inch (1941–43)",
+    name: "War Office 1-Inch (1940–42)",
     description:
-      "British War Office GSGS 4136, One-Inch (1:63,360) maps of Ireland, 1941–1943.",
+      "British War Office GSGS 4136, One-Inch (1:63,360) maps of Ireland, 1940–1942.",
     url: "https://mapseries-tilesets.s3.amazonaws.com/ireland/gsgs4136/{z}/{x}/{y}.png",
     attribution:
       'Courtesy of <a href="https://maps.nls.uk/">NLS</a>',

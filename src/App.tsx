@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { LatLngTuple } from "leaflet";
 import { useMapState } from "./hooks/useMapState";
 import { useHashSync } from "./hooks/useHashSync";
 import { useHeritageData } from "./hooks/useHeritageData";
+import { useTimeLapse } from "./hooks/useTimeLapse";
 import MapShell from "./components/MapShell";
 import OpacitySlider from "./components/controls/OpacitySlider";
 import SearchPanel from "./components/ui/SearchPanel";
@@ -80,6 +82,23 @@ export default function App() {
       requestedImages: 0,
       message: "Preparing historical map…",
     });
+  const {
+    playbackState,
+    isPlaying,
+    speed: timeLapseSpeed,
+    preloadLayerId,
+    preloadReadiness,
+    announcement: timeLapseAnnouncement,
+    play: playTimeLapse,
+    pause: pauseTimeLapse,
+    setSpeed: setTimeLapseSpeed,
+    step: stepTimeLapse,
+    onPreloadStatusChange,
+  } = useTimeLapse({
+    activeLayerId: state.activeLayerId,
+    enabled: state.mode === "overlay" && !activeStoryRoute,
+    onSelectLayer: setActiveLayer,
+  });
 
   useHashSync(
     state,
@@ -111,8 +130,9 @@ export default function App() {
       setDossierOpen(true);
       setEvidenceBrowserOpen(false);
       setExploreOpen(false);
+      pauseTimeLapse("Time travel paused while a guided story is open.");
     },
-    [setState],
+    [pauseTimeLapse, setState],
   );
 
   useEffect(() => {
@@ -144,6 +164,7 @@ export default function App() {
 
   const handleSearchSelect = useCallback(
     (result: SearchResult) => {
+      pauseTimeLapse("Time travel paused because the map moved.");
       setState((current) => ({
         ...current,
         center: [result.lat, result.lng],
@@ -157,7 +178,7 @@ export default function App() {
       setExploreOpen(false);
       leaveStory("replace");
     },
-    [leaveStory, setState]
+    [leaveStory, pauseTimeLapse, setState]
   );
 
   const startStory = useCallback(
@@ -233,6 +254,7 @@ export default function App() {
 
   const handleEvidenceSelect = useCallback(
     (feature: HeritageFeature) => {
+      pauseTimeLapse("Time travel paused because the map moved.");
       const coordinates = featureRepresentativeCoordinates(feature);
       setSelectedFeature(feature);
       setDossierOpen(true);
@@ -246,25 +268,59 @@ export default function App() {
         }));
       }
     },
-    [setState],
+    [pauseTimeLapse, setState],
   );
 
   const openEvidenceBrowser = useCallback(() => {
+    pauseTimeLapse("Time travel paused while the evidence browser is open.");
     setExploreOpen(false);
     setDossierOpen(false);
     setEvidenceBrowserOpen(true);
-  }, []);
+  }, [pauseTimeLapse]);
 
   const closeEvidenceBrowser = useCallback(() => {
     setEvidenceBrowserOpen(false);
   }, []);
 
   const openExplore = useCallback(() => {
+    pauseTimeLapse("Time travel paused while Explore is open.");
     setSelectedFeature(null);
     setDossierOpen(false);
     setEvidenceBrowserOpen(false);
     setExploreOpen(true);
-  }, []);
+  }, [pauseTimeLapse]);
+
+  const handleViewChange = useCallback(
+    (center: LatLngTuple, zoom: number) => {
+      pauseTimeLapse("Time travel paused because you moved the map.");
+      setViewPosition(center, zoom);
+    },
+    [pauseTimeLapse, setViewPosition],
+  );
+
+  const handleTimelineChange = useCallback(
+    (layerId: string) => {
+      pauseTimeLapse("Time travel paused on the selected edition.");
+      setActiveLayer(layerId);
+    },
+    [pauseTimeLapse, setActiveLayer],
+  );
+
+  const handleModeChange = useCallback(
+    (mode: Parameters<typeof setMode>[0]) => {
+      pauseTimeLapse("Time travel paused because the comparison mode changed.");
+      setMode(mode);
+    },
+    [pauseTimeLapse, setMode],
+  );
+
+  const handleBasemapChange = useCallback(
+    (basemapId: string) => {
+      pauseTimeLapse("Time travel paused because the basemap changed.");
+      setBasemap(basemapId);
+    },
+    [pauseTimeLapse, setBasemap],
+  );
 
   return (
     <div className={`app-shell${selectedFeature ? " has-selection" : ""}${activeStoryRoute ? " has-story" : ""}${exploreOpen ? " has-explore" : ""}${dossierOpen ? " dossier-expanded" : ""}${evidenceBrowserOpen ? " has-evidence-browser" : ""}`}>
@@ -273,9 +329,11 @@ export default function App() {
         heritageData={heritageData}
         selectedFeature={selectedFeature}
         interactionDisabled={evidenceBrowserOpen}
-        onViewChange={setViewPosition}
+        preloadHistoricalLayerId={preloadLayerId}
+        onViewChange={handleViewChange}
         onSelectFeature={handleSelectFeature}
         onHistoricalStatusChange={setHistoricalReadiness}
+        onHistoricalPreloadStatusChange={onPreloadStatusChange}
       />
 
       <div className="top-left-stack">
@@ -292,8 +350,8 @@ export default function App() {
         <MapToolbar
           state={state}
           heritageData={heritageData}
-          onModeChange={setMode}
-          onBasemapChange={setBasemap}
+          onModeChange={handleModeChange}
+          onBasemapChange={handleBasemapChange}
           onBlendModeChange={setBlendMode}
         />
       </div>
@@ -364,7 +422,20 @@ export default function App() {
         onSelectFeature={handleEvidenceSelect}
       />
 
-      <TimelineRail value={state.activeLayerId} onChange={setActiveLayer} />
+      <TimelineRail
+        value={state.activeLayerId}
+        enabled={state.mode === "overlay" && !activeStoryRoute}
+        isPlaying={isPlaying}
+        playbackState={playbackState}
+        speed={timeLapseSpeed}
+        announcement={timeLapseAnnouncement}
+        preloadReadiness={preloadReadiness}
+        onChange={handleTimelineChange}
+        onPlay={playTimeLapse}
+        onPause={() => pauseTimeLapse()}
+        onStep={stepTimeLapse}
+        onSpeedChange={setTimeLapseSpeed}
+      />
 
       <MapLegend
         enabledSourceIds={stableEnabledSources}

@@ -22,9 +22,11 @@ interface MapRuntimeProps {
   heritageData: HeritageData;
   selectedFeature: HeritageFeature | null;
   interactionDisabled?: boolean;
+  preloadHistoricalLayerId?: string | null;
   onViewChange: (center: LatLngTuple, zoom: number) => void;
   onSelectFeature: (feature: HeritageFeature) => void;
   onHistoricalStatusChange: (readiness: HistoricalReadiness) => void;
+  onHistoricalPreloadStatusChange?: (readiness: HistoricalReadiness) => void;
 }
 
 const PANE_Z_INDEX = {
@@ -54,9 +56,11 @@ export default function MapRuntime({
   heritageData,
   selectedFeature,
   interactionDisabled = false,
+  preloadHistoricalLayerId = null,
   onViewChange,
   onSelectFeature,
   onHistoricalStatusChange,
+  onHistoricalPreloadStatusChange,
 }: MapRuntimeProps) {
   const shellRef = useRef<HTMLDivElement>(null);
   const primaryContainerRef = useRef<HTMLDivElement>(null);
@@ -67,6 +71,7 @@ export default function MapRuntime({
   const primaryBasemapRef = useRef<L.TileLayer | null>(null);
   const secondaryBasemapRef = useRef<L.TileLayer | null>(null);
   const historicalLayerRef = useRef<L.GridLayer | null>(null);
+  const preloadedHistoricalRef = useRef<L.GridLayer | null>(null);
   const secondaryHistoricalRef = useRef<L.GridLayer | null>(null);
   const primaryHeritageRef = useRef<HeritageLayerController | null>(null);
   const secondaryHeritageRef = useRef<HeritageLayerController | null>(null);
@@ -284,6 +289,120 @@ export default function MapRuntime({
     historicalSupported,
     onHistoricalStatusChange,
     // Layer construction is independent of presentation-mode changes.
+  ]);
+
+  useEffect(() => {
+    const map = primaryMapRef.current;
+    const preloadLayer = preloadHistoricalLayerId
+      ? findLayer(preloadHistoricalLayerId, historicalLayers)
+      : undefined;
+
+    preloadedHistoricalRef.current?.remove();
+    preloadedHistoricalRef.current = null;
+
+    if (
+      !map ||
+      !preloadLayer ||
+      preloadLayer.id === historical.id ||
+      state.mode !== "overlay" ||
+      !onHistoricalPreloadStatusChange
+    ) {
+      return;
+    }
+
+    const supported =
+      state.zoom >= (preloadLayer.minZoom ?? 0) &&
+      state.zoom <= preloadLayer.maxZoom;
+    if (!supported) {
+      onHistoricalPreloadStatusChange({
+        ...initialReadiness(preloadLayer.id),
+        status: "unsupported-zoom",
+        message: `Zoom to ${preloadLayer.minZoom ?? 0}–${preloadLayer.maxZoom} to view this map.`,
+      });
+      return;
+    }
+
+    const next = createHistoricalLayer(preloadLayer, {
+      pane: "historicalPane",
+      opacity: 0,
+      bounds: L.latLngBounds(IRELAND_BOUNDS),
+      updateWhenIdle: true,
+      keepBuffer: 1,
+    });
+    preloadedHistoricalRef.current = next;
+    const readiness = initialReadiness(preloadLayer.id);
+
+    const publish = (nextReadiness: HistoricalReadiness) => {
+      Object.assign(readiness, nextReadiness);
+      onHistoricalPreloadStatusChange({ ...readiness });
+    };
+    const handleLoading = () => {
+      publish({
+        ...readiness,
+        status: "loading",
+        message: "Preloading the next historical edition…",
+      });
+    };
+    const handleTileLoad = () => {
+      if (!preloadLayer.composite) readiness.loadedTiles += 1;
+    };
+    const handleTileError = () => {
+      readiness.errorTiles += 1;
+    };
+    const handleNlsOutcome: L.LeafletEventHandlerFn = (leafletEvent) => {
+      const event = leafletEvent as L.LeafletEvent & NlsTileOutcome;
+      readiness.requestedImages += event.requestedCount;
+      if (event.loadedCount > 0) readiness.loadedTiles += 1;
+      if (event.kind === "empty") readiness.emptyTiles += 1;
+      if (event.kind === "error") readiness.errorTiles += 1;
+    };
+    const handleLoad = () => {
+      const hasTiles = readiness.loadedTiles > 0;
+      const hasGaps = readiness.emptyTiles > 0 || readiness.errorTiles > 0;
+      publish({
+        ...readiness,
+        status: hasTiles
+          ? hasGaps
+            ? "partial"
+            : "available"
+          : readiness.errorTiles > 0
+            ? "error"
+            : "outside-coverage",
+        message: hasTiles
+          ? hasGaps
+            ? "The next edition has partial coverage in this view."
+            : "The next historical edition is ready."
+          : readiness.errorTiles > 0
+            ? "The next map source is temporarily unavailable."
+            : "The next edition has no mapped sheet here.",
+      });
+    };
+
+    next.on("loading", handleLoading);
+    next.on("tileload", handleTileLoad);
+    next.on("tileerror", handleTileError);
+    next.on("nlstileoutcome", handleNlsOutcome);
+    next.on("load", handleLoad);
+    next.addTo(map);
+    handleLoading();
+
+    return () => {
+      next.off("loading", handleLoading);
+      next.off("tileload", handleTileLoad);
+      next.off("tileerror", handleTileError);
+      next.off("nlstileoutcome", handleNlsOutcome);
+      next.off("load", handleLoad);
+      next.remove();
+      if (preloadedHistoricalRef.current === next) {
+        preloadedHistoricalRef.current = null;
+      }
+    };
+  }, [
+    historical.id,
+    onHistoricalPreloadStatusChange,
+    preloadHistoricalLayerId,
+    state.mode,
+    state.zoom,
   ]);
 
   useEffect(() => {

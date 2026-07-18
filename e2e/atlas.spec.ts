@@ -292,6 +292,87 @@ test("keeps one map runtime and does not refetch evidence across modes", async (
   expect(consoleErrors).toEqual([]);
 });
 
+test("preloads, advances, and interrupts the time-travel sequence", async ({
+  page,
+}) => {
+  await mockPublicSources(page);
+  await page.goto(
+    "/#53.50000,-8.00000,10,6inch-1st,osm,0.70,overlay,normal",
+  );
+  await expect(page.getByText("Historical map ready.")).toHaveCount(1);
+
+  const console = page.locator(".timeline-console");
+  await page.getByRole("combobox", { name: "Time travel speed" }).selectOption(
+    "fast",
+  );
+  await page.getByRole("button", { name: "Play time travel" }).click();
+
+  await expect(console).toHaveAttribute("data-playback-state", "playing");
+  await expect(console).toHaveAttribute(
+    "data-preload-status",
+    /available|partial/,
+  );
+  await expect(
+    page.getByRole("button", { name: "1859–1917", exact: true }),
+  ).toHaveClass("active", { timeout: 4_000 });
+
+  await page.getByRole("button", { name: "Pause time travel" }).click();
+  await expect(console).toHaveAttribute("data-playback-state", "paused");
+  await expect(console).toHaveAttribute("data-preload-status", "idle");
+
+  const swipe = page.getByRole("button", { name: "Swipe", exact: true });
+  if (!(await swipe.isVisible())) {
+    await page.locator(".compare-more summary").click();
+  }
+  await swipe.click();
+  await expect(page.getByRole("button", { name: "Play time travel" })).toBeDisabled();
+  await expect(page.locator(".time-lapse-edition small")).toHaveText(
+    "Switch to Overlay mode to play",
+  );
+});
+
+test("skips editions outside the current scale without leaving a spinner", async ({
+  page,
+}) => {
+  await mockPublicSources(page);
+  await page.goto(
+    "/#53.50000,-8.00000,17,6inch-1st,osm,0.70,overlay,normal",
+  );
+  await page.getByRole("button", { name: "Play time travel" }).click();
+  await expect(page.locator(".timeline-console")).toHaveAttribute(
+    "data-playback-state",
+    "complete",
+  );
+  await expect(page.locator(".time-lapse-edition small")).toHaveText(
+    /Sequence complete.*unavailable at this scale or location/,
+  );
+});
+
+test("keeps time-travel controls legible with reduced motion", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockPublicSources(page);
+  await page.goto(
+    "/#53.50000,-8.00000,10,6inch-1st,osm,0.70,overlay,normal",
+  );
+
+  await expect(page.locator(".time-lapse-edition small")).toHaveText(
+    "Reduced motion · instant transitions",
+  );
+  const playerBox = await page.locator(".time-lapse-player").boundingBox();
+  const timelineBox = await page.locator(".timeline-rail").boundingBox();
+  expect(playerBox).not.toBeNull();
+  expect(timelineBox).not.toBeNull();
+  expect(playerBox!.x).toBeGreaterThanOrEqual(0);
+  expect(playerBox!.x + playerBox!.width).toBeLessThanOrEqual(
+    page.viewportSize()!.width,
+  );
+  expect(timelineBox!.y + timelineBox!.height).toBeLessThanOrEqual(
+    page.viewportSize()!.height,
+  );
+});
+
 test("operates the complete desktop map control surface", async ({
   page,
 }, testInfo) => {
@@ -305,12 +386,12 @@ test("operates the complete desktop map control surface", async ({
   );
 
   for (const era of [
-    "1829-1842",
-    "1888-1913",
-    "Early OS",
-    "Contours",
-    "1941-43",
-    "1940",
+    "1829–1842",
+    "1859–1917",
+    "1888–1913",
+    "1898–1902",
+    "c. 1940",
+    "1940–42",
   ]) {
     const button = page.getByRole("button", { name: era, exact: true });
     await button.click();

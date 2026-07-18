@@ -50,9 +50,9 @@
   "timeline": {
     "display": "grid",
     "rect": [
-      340,
+      310,
       832,
-      760,
+      820,
       52
     ],
     "background": "rgb(251, 248, 239)",
