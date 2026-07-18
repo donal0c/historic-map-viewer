@@ -455,7 +455,10 @@ test("focuses selected evidence and opens the inspector", async ({ page }) => {
   if ((page.viewportSize()?.width ?? 0) <= 780) {
     const sheet = page.locator(".place-dossier");
     const handle = page.getByRole("slider", { name: "Evidence sheet height" });
-    await expect(handle).toHaveAttribute("aria-valuetext", "half");
+    await expect(handle).toHaveAttribute(
+      "aria-valuetext",
+      "half-height evidence panel",
+    );
     await handle.press("ArrowUp");
     await expect(sheet).toHaveClass(/sheet-full/);
     await handle.press("ArrowDown");
@@ -529,11 +532,13 @@ test("keeps the welcome atlas and guided story free of serious accessibility vio
       );
     });
 
+  await expect(page.locator(".dossier-peek")).toBeHidden();
   expect(await seriousViolations()).toEqual([]);
   await page.locator(".featured-story").click();
   await expect(
     page.getByRole("heading", { name: "A city fixed on paper" }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Share" })).toHaveCount(1);
   expect(await seriousViolations()).toEqual([]);
 });
 
@@ -613,7 +618,7 @@ test("matches the responsive atlas visual contract", async ({ page }, testInfo) 
       viewport: [innerWidth, innerHeight],
       map: describe(".map-runtime"),
       atlasBar: describe(".top-left-stack"),
-      dossier: describe(".place-dossier"),
+      dossier: describe(".place-dossier, .dossier-peek"),
       evidenceTrigger: describe(".layer-catalogue-trigger", true),
       timeline: describe(".timeline-rail"),
     };

@@ -90,14 +90,10 @@ async function measureScenario(browserInstance, scenario) {
   });
   await page.waitForFunction(
     () => {
-      const status = document.querySelector(
-        '.place-dossier [role="status"]',
-      )?.textContent;
+      const dossier = document.querySelector(".place-dossier, .dossier-peek");
       return (
-        status?.includes("Historical map ready.") ||
-        status?.includes("Historical coverage is partial") ||
-        status?.includes("no mapped sheet") ||
-        status?.includes("temporarily unavailable")
+        dossier?.dataset.historicalStatus !== "idle" &&
+        dossier?.dataset.historicalStatus !== "loading"
       );
     },
     undefined,
@@ -107,10 +103,12 @@ async function measureScenario(browserInstance, scenario) {
   let heritageSettled = true;
   try {
     await page.waitForFunction(
-      () =>
-        !document
-          .querySelector('.place-dossier [role="status"]')
-          ?.textContent?.includes("Refreshing heritage layers"),
+      () => {
+        const dossier = document.querySelector(".place-dossier, .dossier-peek");
+        return ["ready", "error"].includes(
+          dossier?.dataset.heritageStatus ?? "",
+        );
+      },
       undefined,
       { timeout: 10_000 },
     );
@@ -125,7 +123,9 @@ async function measureScenario(browserInstance, scenario) {
       .getEntriesByType("measure")
       .filter((entry) => entry.name.startsWith("historic-map:"));
     const status = document
-      .querySelector('.place-dossier [role="status"]')
+      .querySelector(
+        '.place-dossier [role="status"], .dossier-peek > small',
+      )
       ?.textContent?.trim();
 
     return {

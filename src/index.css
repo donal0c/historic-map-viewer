@@ -453,6 +453,15 @@ select:focus-visible {
   letter-spacing: -0.035em;
 }
 
+.explore-intro {
+  max-width: 560px;
+  margin: 9px 0 0;
+  color: #62675e;
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .icon-close {
   width: 34px;
   height: 34px;
@@ -1195,6 +1204,76 @@ select:focus-visible {
 
 /* Raised evidence inspector — the only large panel */
 
+.dossier-peek {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 1040;
+  display: grid;
+  width: 272px;
+  gap: 5px;
+  border: 1px solid rgba(42, 47, 38, 0.18);
+  border-radius: 16px;
+  padding: 15px 17px;
+  text-align: left;
+  color: var(--ink);
+  background: rgba(255, 252, 243, 0.95);
+  box-shadow: 0 18px 54px rgba(17, 20, 15, 0.22);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.dossier-peek:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 23px 64px rgba(17, 20, 15, 0.28);
+}
+
+.dossier-peek > span {
+  color: var(--accent);
+}
+
+.dossier-peek > strong {
+  overflow: hidden;
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dossier-peek > small {
+  overflow: hidden;
+  color: #686d63;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dossier-peek > em {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+  border-top: 1px solid var(--line);
+  padding-top: 9px;
+  color: var(--accent);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dossier-peek > em i {
+  font-family: Georgia, serif;
+  font-size: 17px;
+  font-style: normal;
+}
+
 .place-dossier {
   position: absolute;
   top: 18px;
@@ -1218,10 +1297,17 @@ select:focus-visible {
   padding-bottom: 15px;
 }
 
-.share-control {
+.dossier-actions {
   position: absolute;
   top: 0;
   right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.share-control {
+  position: static;
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 6px 9px;
@@ -1232,6 +1318,24 @@ select:focus-visible {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.dossier-collapse {
+  width: 29px;
+  height: 29px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: #686d63;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dossier-collapse:hover {
+  color: #fffdf4;
+  border-color: var(--ink);
+  background: var(--ink);
 }
 
 .share-control:hover {
@@ -1276,7 +1380,7 @@ select:focus-visible {
 
 .dossier-metrics span {
   color: #858477;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -1330,7 +1434,7 @@ select:focus-visible {
 .feature-card > span,
 .feature-list button > span {
   color: var(--accent);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1511,6 +1615,38 @@ select:focus-visible {
   color: #fffaf0;
   background: var(--vermilion);
   box-shadow: 0 9px 20px rgba(116, 55, 34, 0.22);
+}
+
+.has-explore .top-left-stack {
+  right: auto;
+  width: min(620px, calc(100vw - 140px));
+  min-height: 0;
+  grid-template-columns: 1fr;
+}
+
+.has-explore .search-panel {
+  border-right: 0;
+}
+
+.has-explore .dossier-peek,
+.has-explore .place-dossier,
+.has-explore .layer-catalogue-shell,
+.has-explore .timeline-rail,
+.has-explore .opacity-control,
+.has-explore .map-legend {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.has-explore .map-toolbar {
+  display: none;
+}
+
+.has-explore .explore-panel {
+  top: 112px;
+  width: min(880px, calc(100vw - 140px));
+  max-height: calc(100vh - 130px);
 }
 
 .opacity-control {
@@ -1917,7 +2053,8 @@ select:focus-visible {
     display: none;
   }
 
-  .place-dossier.has-selection {
+  .place-dossier.has-selection,
+  .dossier-expanded .place-dossier {
     display: block;
     right: 8px;
     bottom: 72px;
@@ -1926,6 +2063,10 @@ select:focus-visible {
     max-height: 40vh;
     border-radius: 16px;
     padding: 15px;
+  }
+
+  .dossier-peek {
+    display: none;
   }
 
   .sheet-handle {
@@ -1941,10 +2082,11 @@ select:focus-visible {
   }
 
   .sheet-handle > span {
-    width: 38px;
-    height: 4px;
+    width: 46px;
+    height: 5px;
     border-radius: 999px;
-    background: #b8b8ad;
+    background: #999c91;
+    box-shadow: 0 0 0 5px rgba(153, 156, 145, 0.12);
   }
 
   .sheet-handle > strong {
@@ -2003,6 +2145,20 @@ select:focus-visible {
     overflow-x: auto;
     justify-content: flex-start;
     scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 17px,
+      #000 calc(100% - 17px),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 17px,
+      #000 calc(100% - 17px),
+      transparent
+    );
   }
 
   .timeline-rail::-webkit-scrollbar {
@@ -2046,6 +2202,10 @@ select:focus-visible {
 
   .explore-header h2 {
     font-size: 28px;
+  }
+
+  .explore-intro {
+    font-size: 13px;
   }
 
   .explore-composition {
@@ -2111,6 +2271,29 @@ select:focus-visible {
   .has-story .place-dossier,
   .has-story .layer-catalogue-shell,
   .has-story .opacity-control {
+    display: none;
+  }
+
+  .has-explore .top-left-stack {
+    right: 10px;
+    left: 10px;
+    width: auto;
+  }
+
+  .has-explore .explore-panel {
+    top: 84px;
+    bottom: 8px;
+    width: auto;
+    max-height: none;
+  }
+
+  .has-explore .map-toolbar,
+  .has-explore .dossier-peek,
+  .has-explore .place-dossier,
+  .has-explore .layer-catalogue-shell,
+  .has-explore .timeline-rail,
+  .has-explore .opacity-control,
+  .has-explore .map-legend {
     display: none;
   }
 }

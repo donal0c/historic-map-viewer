@@ -33,8 +33,12 @@ export default function ExplorePanel({
     >
       <header className="explore-header">
         <div>
-          <p className="eyebrow">The atlas is open</p>
+          <p className="eyebrow">Six map series · 27 public sources</p>
           <h2>Choose a way into the map</h2>
+          <p className="explore-intro">
+            Search an Irish place, follow a story, or read the map alongside
+            archaeology and architecture.
+          </p>
         </div>
         <button
           className="icon-close"

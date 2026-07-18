@@ -19,6 +19,10 @@ interface PlaceDossierProps {
   data: HeritageData;
   selectedFeature: HeritageFeature | null;
   historicalReadiness: HistoricalReadiness;
+  expanded: boolean;
+  showShare: boolean;
+  onExpand: () => void;
+  onCollapse: () => void;
   onSelectFeature: (feature: HeritageFeature) => void;
   onCloseFeature: () => void;
   onShare: () => void;
@@ -29,6 +33,10 @@ export default function PlaceDossier({
   data,
   selectedFeature,
   historicalReadiness,
+  expanded,
+  showShare,
+  onExpand,
+  onCollapse,
   onSelectFeature,
   onCloseFeature,
   onShare,
@@ -37,7 +45,7 @@ export default function PlaceDossier({
   const dragStartY = useRef<number | null>(null);
   const layer = findLayer(state.activeLayerId, historicalLayers) ?? historicalLayers[0];
   const visibleFeatures = data.features.filter((feature) => feature.layer !== "zones");
-  const highlights = visibleFeatures.slice(0, 7);
+  const highlights = summariseHighlights(visibleFeatures).slice(0, 7);
   const hasTruncatedSource = Object.values(data.sources).some(
     (source) => source?.truncated,
   );
@@ -81,11 +89,37 @@ export default function PlaceDossier({
     }
   }
 
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        className="dossier-peek"
+        data-heritage-status={data.status}
+        data-historical-status={historicalReadiness.status}
+        onClick={onExpand}
+        aria-label="Open evidence summary for the current view"
+      >
+        <span className="eyebrow">Current view</span>
+        <strong>
+          {state.placeLabel ??
+            `${state.center[0].toFixed(3)}, ${state.center[1].toFixed(3)}`}
+        </strong>
+        <small>{historicalReadiness.message}</small>
+        <em>
+          {visibleFeatures.length}{hasTruncatedSource ? "+" : ""} nearby records
+          <i aria-hidden="true">→</i>
+        </em>
+      </button>
+    );
+  }
+
   return (
     <aside
       className={`place-dossier ${
         selectedFeature ? `has-selection sheet-${sheetState}` : ""
       }`}
+      data-heritage-status={data.status}
+      data-historical-status={historicalReadiness.status}
       aria-label="Current place and nearby evidence"
     >
       {selectedFeature && (
@@ -96,7 +130,7 @@ export default function PlaceDossier({
           aria-valuemin={0}
           aria-valuemax={2}
           aria-valuenow={SHEET_STATES.indexOf(sheetState)}
-          aria-valuetext={sheetState}
+          aria-valuetext={`${sheetState}-height evidence panel`}
           tabIndex={0}
           onPointerDown={handleSheetPointerDown}
           onPointerUp={handleSheetPointerUp}
@@ -111,9 +145,21 @@ export default function PlaceDossier({
       )}
       <div className="dossier-header">
         <p className="eyebrow">Current view</p>
-        <button type="button" className="share-control" onClick={onShare}>
-          Share
-        </button>
+        <div className="dossier-actions">
+          {showShare && (
+            <button type="button" className="share-control" onClick={onShare}>
+              Share
+            </button>
+          )}
+          <button
+            type="button"
+            className="dossier-collapse"
+            onClick={onCollapse}
+            aria-label="Collapse evidence summary"
+          >
+            —
+          </button>
+        </div>
         <h2>
           {state.placeLabel ??
             `${state.center[0].toFixed(3)}, ${state.center[1].toFixed(3)}`}
@@ -152,9 +198,9 @@ export default function PlaceDossier({
       <div className="feature-list">
         <div className="feature-list-title">
           <span>Nearby evidence</span>
-          <span>{highlights.length}</span>
+          <span>{visibleFeatures.length}</span>
         </div>
-        {highlights.map((feature) => (
+        {highlights.map(({ feature, count }) => (
           <button
             type="button"
             key={feature.id}
@@ -163,7 +209,10 @@ export default function PlaceDossier({
           >
             <span>{heritageSourceById[feature.layer].shortName}</span>
             <strong>{feature.title}</strong>
-            <em>{feature.subtitle}</em>
+            <em>
+              {feature.subtitle}
+              {count > 1 ? ` · ${count} similar records` : ""}
+            </em>
           </button>
         ))}
       </div>
@@ -231,3 +280,25 @@ function FeatureCard({
 
 type SheetState = "collapsed" | "half" | "full";
 const SHEET_STATES: SheetState[] = ["collapsed", "half", "full"];
+
+function summariseHighlights(features: HeritageFeature[]) {
+  const summaries = new Map<
+    string,
+    { feature: HeritageFeature; count: number }
+  >();
+
+  for (const feature of features) {
+    const key = `${feature.layer}:${feature.title
+      .trim()
+      .toLocaleLowerCase()
+      .replace(/\s+/g, " ")}`;
+    const existing = summaries.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      summaries.set(key, { feature, count: 1 });
+    }
+  }
+
+  return [...summaries.values()];
+}

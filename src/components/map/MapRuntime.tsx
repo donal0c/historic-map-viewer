@@ -133,11 +133,28 @@ export default function MapRuntime({
     }
 
     externalViewUpdateRef.current = true;
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (state.viewTransition === "fly" && !prefersReducedMotion) {
+      const releaseExternalUpdate = () => {
+        externalViewUpdateRef.current = false;
+      };
+      map.once("moveend", releaseExternalUpdate);
+      map.flyTo(state.center, state.zoom, {
+        duration: 0.85,
+        easeLinearity: 0.24,
+      });
+      return () => {
+        map.off("moveend", releaseExternalUpdate);
+        externalViewUpdateRef.current = false;
+      };
+    }
     map.setView(state.center, state.zoom, { animate: false });
     queueMicrotask(() => {
       externalViewUpdateRef.current = false;
     });
-  }, [state.center, state.zoom]);
+  }, [state.center, state.viewTransition, state.zoom]);
 
   useEffect(() => {
     const map = primaryMapRef.current;
@@ -171,6 +188,7 @@ export default function MapRuntime({
     const next = createHistoricalLayer(historical, {
       pane: "historicalPane",
       opacity: 0,
+      bounds: L.latLngBounds(IRELAND_BOUNDS),
       updateWhenIdle: true,
       keepBuffer: 1,
     });
@@ -458,6 +476,7 @@ export default function MapRuntime({
     secondaryHistoricalRef.current = createHistoricalLayer(historical, {
       pane: "historicalPane",
       opacity: 1,
+      bounds: L.latLngBounds(IRELAND_BOUNDS),
     }).addTo(map);
   }, [historical, historicalSupported, state.mode]);
 

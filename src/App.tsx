@@ -53,6 +53,7 @@ export default function App() {
   const [selectedFeature, setSelectedFeature] = useState<HeritageFeature | null>(
     null
   );
+  const [dossierOpen, setDossierOpen] = useState(false);
   const [activeStoryRoute, setActiveStoryRoute] = useState(() =>
     readStoryRoute(window.location.search),
   );
@@ -91,6 +92,7 @@ export default function App() {
         ...current,
         center: step.center,
         zoom: step.zoom,
+        viewTransition: "fly",
         placeLabel: story.place,
         activeLayerId: step.activeLayerId,
         mode: step.mode,
@@ -99,6 +101,7 @@ export default function App() {
       }));
       setEnabledHeritageSources(step.enabledSources);
       setSelectedFeature(null);
+      setDossierOpen(true);
       setExploreOpen(false);
     },
     [setState],
@@ -127,6 +130,7 @@ export default function App() {
 
   const leaveStory = useCallback((historyMode: "push" | "replace" = "push") => {
     setActiveStoryRoute(null);
+    setDossierOpen(false);
     window.history[`${historyMode}State`](null, "", storyUrl(null));
   }, []);
 
@@ -136,9 +140,11 @@ export default function App() {
         ...current,
         center: [result.lat, result.lng],
         zoom: 14,
+        viewTransition: "instant",
         placeLabel: result.label,
       }));
       setSelectedFeature(null);
+      setDossierOpen(false);
       setExploreOpen(false);
       leaveStory("replace");
     },
@@ -211,14 +217,25 @@ export default function App() {
     [],
   );
 
+  const handleSelectFeature = useCallback((feature: HeritageFeature) => {
+    setSelectedFeature(feature);
+    setDossierOpen(true);
+  }, []);
+
+  const openExplore = useCallback(() => {
+    setSelectedFeature(null);
+    setDossierOpen(false);
+    setExploreOpen(true);
+  }, []);
+
   return (
-    <div className={`app-shell${selectedFeature ? " has-selection" : ""}${activeStoryRoute ? " has-story" : ""}`}>
+    <div className={`app-shell${selectedFeature ? " has-selection" : ""}${activeStoryRoute ? " has-story" : ""}${exploreOpen ? " has-explore" : ""}${dossierOpen ? " dossier-expanded" : ""}`}>
       <MapShell
         state={state}
         heritageData={heritageData}
         selectedFeature={selectedFeature}
         onViewChange={setViewPosition}
-        onSelectFeature={setSelectedFeature}
+        onSelectFeature={handleSelectFeature}
         onHistoricalStatusChange={setHistoricalReadiness}
       />
 
@@ -226,8 +243,11 @@ export default function App() {
         <SearchPanel
           placeLabel={state.placeLabel}
           onSelect={handleSearchSelect}
-          onSearchStart={() => setSelectedFeature(null)}
-          onExplore={() => setExploreOpen(true)}
+          onSearchStart={() => {
+            setSelectedFeature(null);
+            setDossierOpen(false);
+          }}
+          onExplore={openExplore}
         />
         <MapToolbar
           state={state}
@@ -272,7 +292,14 @@ export default function App() {
         data={heritageData}
         historicalReadiness={historicalReadiness}
         selectedFeature={selectedFeature}
-        onSelectFeature={setSelectedFeature}
+        expanded={Boolean(selectedFeature || activeStoryRoute || dossierOpen)}
+        showShare={!activeStoryRoute}
+        onExpand={() => setDossierOpen(true)}
+        onCollapse={() => {
+          setSelectedFeature(null);
+          setDossierOpen(false);
+        }}
+        onSelectFeature={handleSelectFeature}
         onCloseFeature={() => setSelectedFeature(null)}
         onShare={() => void shareCurrentView()}
       />

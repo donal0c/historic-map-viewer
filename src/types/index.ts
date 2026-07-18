@@ -113,6 +113,7 @@ export interface TileLayerConfig {
 export interface MapState {
   center: LatLngTuple;
   zoom: number;
+  viewTransition?: "instant" | "fly";
   placeLabel?: string;
   activeLayerId: string;
   basemapId: string;

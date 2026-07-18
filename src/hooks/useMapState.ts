@@ -8,13 +8,15 @@ import { getInitialStateFromHash } from "../lib/hash";
 const initialState: MapState = {
   center: DEFAULT_CENTER,
   zoom: DEFAULT_ZOOM,
-  // The all-Ireland one-inch sheet is useful at the opening zoom. The
-  // county-series six-inch sheets become available after a place search.
-  activeLayerId: "ireland-1inch-1st",
-  basemapId: basemapLayers[0].id,
-  opacity: 0.7,
+  viewTransition: "instant",
+  // The quarter-inch sheet is the most continuous, legible national overview.
+  // Detailed county sheets become useful after a place search.
+  activeLayerId: "bartholomew",
+  basemapId: basemapLayers.find((layer) => layer.id === "light")?.id ??
+    basemapLayers[0].id,
+  opacity: 0.58,
   mode: "overlay",
-  blendMode: "normal",
+  blendMode: "multiply",
 };
 
 export function useMapState(initial?: Partial<MapState>) {
@@ -61,7 +63,7 @@ export function useMapState(initial?: Partial<MapState>) {
 
   const setViewPosition = useCallback(
     (center: LatLngTuple, zoom: number) =>
-      setState((s) => ({ ...s, center, zoom })),
+      setState((s) => ({ ...s, center, zoom, viewTransition: "instant" })),
     []
   );
 
