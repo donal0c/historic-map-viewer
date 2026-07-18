@@ -12,8 +12,10 @@ import MapLegend from "./components/ui/MapLegend";
 import LayerCatalogue from "./components/ui/LayerCatalogue";
 import ExplorePanel from "./components/ui/ExplorePanel";
 import StoryPlayer from "./components/ui/StoryPlayer";
+import EvidenceBrowser from "./components/ui/EvidenceBrowser";
 import { defaultHeritageSourceIds } from "./config/heritageSources";
 import { decodeHeritageSourceIds } from "./lib/hash";
+import { featureRepresentativeCoordinates } from "./lib/evidenceBrowser";
 import {
   atlasDestinations,
   atlasStories,
@@ -50,10 +52,15 @@ export default function App() {
     state.zoom,
     stableEnabledSources,
   );
+  const evidenceCenter = useMemo<[number, number]>(
+    () => [state.center[0], state.center[1]],
+    [state.center[0], state.center[1]],
+  );
   const [selectedFeature, setSelectedFeature] = useState<HeritageFeature | null>(
     null
   );
   const [dossierOpen, setDossierOpen] = useState(false);
+  const [evidenceBrowserOpen, setEvidenceBrowserOpen] = useState(false);
   const [activeStoryRoute, setActiveStoryRoute] = useState(() =>
     readStoryRoute(window.location.search),
   );
@@ -102,6 +109,7 @@ export default function App() {
       setEnabledHeritageSources(step.enabledSources);
       setSelectedFeature(null);
       setDossierOpen(true);
+      setEvidenceBrowserOpen(false);
       setExploreOpen(false);
     },
     [setState],
@@ -145,6 +153,7 @@ export default function App() {
       }));
       setSelectedFeature(null);
       setDossierOpen(false);
+      setEvidenceBrowserOpen(false);
       setExploreOpen(false);
       leaveStory("replace");
     },
@@ -222,18 +231,48 @@ export default function App() {
     setDossierOpen(true);
   }, []);
 
+  const handleEvidenceSelect = useCallback(
+    (feature: HeritageFeature) => {
+      const coordinates = featureRepresentativeCoordinates(feature);
+      setSelectedFeature(feature);
+      setDossierOpen(true);
+      setEvidenceBrowserOpen(false);
+      if (coordinates) {
+        setState((current) => ({
+          ...current,
+          center: coordinates,
+          zoom: Math.max(current.zoom, 15),
+          viewTransition: "fly",
+        }));
+      }
+    },
+    [setState],
+  );
+
+  const openEvidenceBrowser = useCallback(() => {
+    setExploreOpen(false);
+    setDossierOpen(false);
+    setEvidenceBrowserOpen(true);
+  }, []);
+
+  const closeEvidenceBrowser = useCallback(() => {
+    setEvidenceBrowserOpen(false);
+  }, []);
+
   const openExplore = useCallback(() => {
     setSelectedFeature(null);
     setDossierOpen(false);
+    setEvidenceBrowserOpen(false);
     setExploreOpen(true);
   }, []);
 
   return (
-    <div className={`app-shell${selectedFeature ? " has-selection" : ""}${activeStoryRoute ? " has-story" : ""}${exploreOpen ? " has-explore" : ""}${dossierOpen ? " dossier-expanded" : ""}`}>
+    <div className={`app-shell${selectedFeature ? " has-selection" : ""}${activeStoryRoute ? " has-story" : ""}${exploreOpen ? " has-explore" : ""}${dossierOpen ? " dossier-expanded" : ""}${evidenceBrowserOpen ? " has-evidence-browser" : ""}`}>
       <MapShell
         state={state}
         heritageData={heritageData}
         selectedFeature={selectedFeature}
+        interactionDisabled={evidenceBrowserOpen}
         onViewChange={setViewPosition}
         onSelectFeature={handleSelectFeature}
         onHistoricalStatusChange={setHistoricalReadiness}
@@ -246,6 +285,7 @@ export default function App() {
           onSearchStart={() => {
             setSelectedFeature(null);
             setDossierOpen(false);
+            setEvidenceBrowserOpen(false);
           }}
           onExplore={openExplore}
         />
@@ -301,6 +341,7 @@ export default function App() {
         }}
         onSelectFeature={handleSelectFeature}
         onCloseFeature={() => setSelectedFeature(null)}
+        onBrowseEvidence={openEvidenceBrowser}
         onShare={() => void shareCurrentView()}
       />
 
@@ -309,6 +350,18 @@ export default function App() {
         data={heritageData}
         zoom={state.zoom}
         onChange={handleHeritageSourcesChange}
+        onBrowseRecords={openEvidenceBrowser}
+      />
+
+      <EvidenceBrowser
+        open={evidenceBrowserOpen}
+        data={heritageData}
+        center={evidenceCenter}
+        placeLabel={state.placeLabel}
+        enabledSourceIds={stableEnabledSources}
+        selectedFeature={selectedFeature}
+        onClose={closeEvidenceBrowser}
+        onSelectFeature={handleEvidenceSelect}
       />
 
       <TimelineRail value={state.activeLayerId} onChange={setActiveLayer} />

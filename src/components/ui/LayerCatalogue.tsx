@@ -15,6 +15,7 @@ interface LayerCatalogueProps {
   data: HeritageData;
   zoom: number;
   onChange: (sourceIds: HeritageLayerId[]) => void;
+  onBrowseRecords: () => void;
 }
 
 export default function LayerCatalogue({
@@ -22,6 +23,7 @@ export default function LayerCatalogue({
   data,
   zoom,
   onChange,
+  onBrowseRecords,
 }: LayerCatalogueProps) {
   const [open, setOpen] = useState(false);
   const enabled = new Set(enabledSourceIds);
@@ -86,6 +88,24 @@ export default function LayerCatalogue({
               Clear
             </button>
           </div>
+
+          <button
+            type="button"
+            className="catalogue-browse-records"
+            onClick={() => {
+              setOpen(false);
+              onBrowseRecords();
+            }}
+          >
+            <span>
+              <strong>Browse complete register</strong>
+              <small>
+                {data.features.length} loaded{" "}
+                {data.features.length === 1 ? "record" : "records"}
+              </small>
+            </span>
+            <em aria-hidden="true">→</em>
+          </button>
 
           <div className="catalogue-groups">
             {groups.map(([categoryId, label]) => (

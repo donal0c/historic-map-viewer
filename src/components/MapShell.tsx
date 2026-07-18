@@ -11,6 +11,7 @@ interface MapShellProps {
   state: MapState;
   heritageData: HeritageData;
   selectedFeature: HeritageFeature | null;
+  interactionDisabled?: boolean;
   onViewChange: (center: LatLngTuple, zoom: number) => void;
   onSelectFeature: (feature: HeritageFeature) => void;
   onHistoricalStatusChange: (readiness: HistoricalReadiness) => void;

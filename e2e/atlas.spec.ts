@@ -489,6 +489,71 @@ test("focuses selected evidence and opens the inspector", async ({ page }) => {
   }
 });
 
+test("browses, filters, exports, and map-selects the complete evidence register", async ({
+  page,
+}) => {
+  await mockPublicSources(page, { featuresPerSource: 4 });
+  await page.goto(
+    "/#53.50000,-8.00000,10,6inch-1st,osm,0.70,overlay,normal",
+  );
+
+  await page.getByRole("button", { name: /Evidence 3/ }).click();
+  await page.getByRole("button", { name: /Browse complete register/ }).click();
+
+  const register = page.getByRole("dialog", {
+    name: "Evidence in this view",
+  });
+  await expect(register).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Evidence in this view" }),
+  ).toBeFocused();
+  await expect(register.getByRole("status").first()).toContainText(
+    "12of 12 loaded records",
+  );
+  await expect(register.getByText("View-radius snapshot.")).toBeVisible();
+
+  await register.locator(".evidence-filter-grid select").first().selectOption("smr");
+  await expect(register.getByRole("status").first()).toContainText(
+    "4of 12 loaded records",
+  );
+  await register.locator(".evidence-filter-grid input[type=search]").fill("Recorded");
+  await expect(register.getByRole("status").first()).toContainText(
+    "4of 12 loaded records",
+  );
+  await register.getByRole("button", { name: "Clear filters" }).click();
+
+  const [geoJsonDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    register.getByRole("button", { name: "GeoJSON" }).click(),
+  ]);
+  expect(geoJsonDownload.suggestedFilename()).toMatch(
+    /^historic-map-evidence-current-view\.geojson$/,
+  );
+  const [csvDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    register.getByRole("button", { name: "CSV" }).click(),
+  ]);
+  expect(csvDownload.suggestedFilename()).toMatch(
+    /^historic-map-evidence-current-view\.csv$/,
+  );
+
+  await page.addScriptTag({ content: axe.source });
+  const serious = await page.evaluate(async () => {
+    const results = await window.axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+    return results.violations.filter((violation) =>
+      ["serious", "critical"].includes(violation.impact ?? ""),
+    );
+  });
+  expect(serious).toEqual([]);
+
+  await register.locator(".evidence-record button").first().click();
+  await expect(register).toBeHidden();
+  await expect(page.locator(".selected-evidence-marker")).toHaveCount(1);
+  await expect(page.locator(".feature-card h3")).toBeVisible();
+});
+
 test("restores compact share state and has no serious accessibility violations", async ({
   page,
 }) => {

@@ -10,6 +10,8 @@ Live site: [historicmapviewer.vercel.app](https://historicmapviewer.vercel.app)
 - Six NLS historical series from the 1830s to the 1940s.
 - A 27-source, opt-in public heritage catalogue with six useful presets.
 - Clustered point, route, and polygon evidence with exact cross-source deduplication and an official-source inspector.
+- A complete evidence register with source, type, geometry, distance, grouping, provenance, and per-source health controls.
+- Filtered GeoJSON and CSV view-snapshot exports that retain query scope, source identifiers, original links, and incomplete-source warnings.
 - A visual atlas entry with six curated places, optional on-device geolocation, and three guided historical stories.
 - Fast Irish/English townland autocomplete, recent searches, explicit external place fallback, and shareable map, evidence, and story-step state.
 - Honest layer readiness: loading, partial coverage, unsupported zoom, outside coverage, and upstream failure are distinct states.
@@ -24,6 +26,7 @@ The visual direction is a quiet archival instrument: the map is the dominant pla
 - Six-inch NLS tiles use a deterministic county-bounds resolver, bounded candidate fan-out, positive/negative caching, and black no-data pixel removal for correct county-edge compositing.
 - A typed heritage registry describes provider, endpoint, geometry, fields, styling, zoom range, query limit, and attribution for every source.
 - Queries are lazy, abortable, debounced, independently cached, and independently degraded.
+- The evidence register uses browser-native list containment for large result sets and keeps every loaded record searchable and keyboard accessible.
 - The mobile evidence inspector snaps between collapsed, half, and full states by drag or keyboard.
 - Autocomplete uses a versioned local index generated from the Tailte Éireann National Placenames Gazetteer. The index is split into lazy initial-letter chunks and never delays the opening map.
 - Submit-only external search uses browser-identified Nominatim first, with a cacheable Vercel/Photon fallback when the primary public service is unavailable.

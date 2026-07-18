@@ -25,6 +25,7 @@ interface PlaceDossierProps {
   onCollapse: () => void;
   onSelectFeature: (feature: HeritageFeature) => void;
   onCloseFeature: () => void;
+  onBrowseEvidence: () => void;
   onShare: () => void;
 }
 
@@ -39,6 +40,7 @@ export default function PlaceDossier({
   onCollapse,
   onSelectFeature,
   onCloseFeature,
+  onBrowseEvidence,
   onShare,
 }: PlaceDossierProps) {
   const [sheetState, setSheetState] = useState<SheetState>("half");
@@ -215,6 +217,18 @@ export default function PlaceDossier({
             </em>
           </button>
         ))}
+        <button
+          type="button"
+          className="dossier-browse-evidence"
+          onClick={onBrowseEvidence}
+        >
+          <span>Complete register</span>
+          <strong>
+            Browse all {data.features.length} loaded{" "}
+            {data.features.length === 1 ? "record" : "records"}
+          </strong>
+          <em>Filter, inspect provenance, or export this view →</em>
+        </button>
       </div>
     </aside>
   );

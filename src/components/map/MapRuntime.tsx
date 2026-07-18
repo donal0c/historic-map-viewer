@@ -21,6 +21,7 @@ interface MapRuntimeProps {
   state: MapState;
   heritageData: HeritageData;
   selectedFeature: HeritageFeature | null;
+  interactionDisabled?: boolean;
   onViewChange: (center: LatLngTuple, zoom: number) => void;
   onSelectFeature: (feature: HeritageFeature) => void;
   onHistoricalStatusChange: (readiness: HistoricalReadiness) => void;
@@ -52,6 +53,7 @@ export default function MapRuntime({
   state,
   heritageData,
   selectedFeature,
+  interactionDisabled = false,
   onViewChange,
   onSelectFeature,
   onHistoricalStatusChange,
@@ -535,6 +537,8 @@ export default function MapRuntime({
           : ""
       }`}
       data-testid="map-runtime"
+      inert={interactionDisabled}
+      aria-hidden={interactionDisabled || undefined}
     >
       <div
         ref={primaryContainerRef}
