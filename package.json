@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "probe:sources": "node scripts/probe-heritage-sources.mjs",
     "probe:tiles": "node scripts/probe-historical-tiles.mjs",
+    "build:places": "node scripts/build-place-index.mjs",
     "measure:performance": "node scripts/measure-performance.mjs",
     "budget": "node scripts/check-bundle-budget.mjs",
     "smoke:production": "node scripts/smoke-production.mjs",

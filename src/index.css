@@ -240,6 +240,26 @@ select:focus-visible {
   letter-spacing: -0.025em;
 }
 
+.search-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atlas-open-button {
+  border: 1px solid rgba(250, 245, 231, 0.22);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #f5f0e3;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
 .search-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -341,7 +361,9 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
-.search-results button:hover {
+.search-results button:hover,
+.search-results button:focus-visible {
+  outline: none;
   background: #ece7dc;
 }
 
@@ -365,6 +387,27 @@ select:focus-visible {
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.search-results-label span {
+  margin-left: 5px;
+  color: var(--muted);
+  font-size: inherit;
+  letter-spacing: 0.08em;
+}
+
+.search-results .panel-note,
+.search-attribution {
+  position: static;
+  margin: 0;
+  padding: 8px 9px 7px 43px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.search-attribution {
+  border-top: 1px solid rgba(37, 42, 34, 0.1);
 }
 
 .map-toolbar {

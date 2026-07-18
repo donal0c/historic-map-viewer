@@ -1,71 +1,158 @@
-import { type FormEvent, useEffect, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { SearchResult } from "../../types";
 import { searchPlaces } from "../../lib/heritage";
+import {
+  readRecentSearches,
+  rememberSearch,
+  searchLocalPlaces,
+} from "../../lib/placeSearch";
 
 interface SearchPanelProps {
   placeLabel?: string;
   onSelect: (result: SearchResult) => void;
   onSearchStart?: () => void;
+  onExplore?: () => void;
 }
+
+type SearchStatus = "idle" | "suggesting" | "searching" | "empty" | "error";
 
 export default function SearchPanel({
   placeLabel,
   onSelect,
   onSearchStart,
+  onExplore,
 }: SearchPanelProps) {
   const [query, setQuery] = useState(placeLabel ?? "");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [showCurated, setShowCurated] = useState(false);
-  const [status, setStatus] = useState<"idle" | "searching" | "empty" | "error">(
-    "idle"
+  const [localResults, setLocalResults] = useState<SearchResult[]>([]);
+  const [externalResults, setExternalResults] = useState<SearchResult[]>([]);
+  const [recentResults, setRecentResults] = useState<SearchResult[]>(() =>
+    readRecentSearches(),
   );
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [status, setStatus] = useState<SearchStatus>("idle");
+  const resultButtons = useRef<Array<HTMLButtonElement | null>>([]);
+  const cleanQuery = query.trim();
   const visibleResults =
-    results.length > 0
-      ? results
-      : showCurated && query.trim().length === 0
-        ? CURATED_PLACES
-        : [];
+    cleanQuery.length === 0 ? recentResults : [...localResults, ...externalResults];
 
   useEffect(() => {
     if (placeLabel) setQuery(placeLabel);
   }, [placeLabel]);
 
+  useEffect(() => {
+    setExternalResults([]);
+    if (cleanQuery.length < 2) {
+      setLocalResults([]);
+      setStatus("idle");
+      return;
+    }
+
+    let active = true;
+    setStatus("suggesting");
+    const timer = window.setTimeout(() => {
+      void searchLocalPlaces(cleanQuery)
+        .then((results) => {
+          if (!active) return;
+          setLocalResults(results);
+          setStatus("idle");
+          setMenuOpen(true);
+        })
+        .catch(() => {
+          if (!active) return;
+          setLocalResults([]);
+          setStatus("error");
+          setMenuOpen(true);
+        });
+    }, 140);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [cleanQuery]);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (query.trim().length < 2) return;
+    await runExternalSearch();
+  }
+
+  async function runExternalSearch() {
+    if (cleanQuery.length < 2) return;
 
     setStatus("searching");
+    setMenuOpen(true);
     onSearchStart?.();
     try {
-      const next = await searchPlaces(query);
-      setResults(next);
-      setStatus(next.length ? "idle" : "empty");
+      const results = await searchPlaces(cleanQuery);
+      setExternalResults(results);
+      setStatus(results.length || localResults.length ? "idle" : "empty");
     } catch {
-      setStatus("error");
+      setStatus(localResults.length ? "idle" : "error");
     }
+  }
+
+  function selectResult(result: SearchResult) {
+    onSelect(result);
+    rememberSearch(result);
+    setRecentResults(readRecentSearches());
+    setLocalResults([]);
+    setExternalResults([]);
+    setQuery(result.label);
+    setMenuOpen(false);
+    setStatus("idle");
+  }
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" && visibleResults.length > 0) {
+      event.preventDefault();
+      resultButtons.current[0]?.focus();
+    }
+    if (event.key === "Escape") setMenuOpen(false);
   }
 
   return (
     <section className="search-panel">
-      <div>
-        <p className="eyebrow">Irish place-time explorer</p>
-        <h1>Historic Map Viewer</h1>
+      <div className="search-panel-heading">
+        <div>
+          <p className="eyebrow">Irish place-time explorer</p>
+          <h1>Historic Map Viewer</h1>
+        </div>
+        {onExplore && (
+          <button className="atlas-open-button" type="button" onClick={onExplore}>
+            Open atlas
+          </button>
+        )}
       </div>
-      <form onSubmit={submit} className="search-form">
+
+      <form onSubmit={submit} className="search-form" role="search">
         <input
           value={query}
-          onFocus={() => setShowCurated(true)}
+          onFocus={() => setMenuOpen(true)}
+          onKeyDown={handleInputKeyDown}
           onChange={(event) => {
             setQuery(event.target.value);
-            setResults([]);
+            setMenuOpen(true);
           }}
-          placeholder="Search a place..."
+          placeholder="Townland, village or landmark…"
           aria-label="Search place"
+          aria-autocomplete="list"
+          aria-controls="place-search-results"
+          aria-expanded={menuOpen && (visibleResults.length > 0 || status !== "idle")}
         />
         <button
           type="submit"
           disabled={status === "searching"}
-          aria-label={status === "searching" ? "Searching for place" : "Search for place"}
+          aria-label={
+            status === "searching"
+              ? "Searching beyond townlands"
+              : "Search beyond townlands"
+          }
         >
           <span className="search-button-wide">
             {status === "searching" ? "Searching" : "Search"}
@@ -75,78 +162,91 @@ export default function SearchPanel({
           </span>
         </button>
       </form>
-      {status === "empty" && <p className="panel-note" role="status">No Irish place match found.</p>}
-      {status === "error" && (
-        <p className="panel-note" role="status">Search is unavailable. Try again in a moment.</p>
-      )}
-      {visibleResults.length > 0 && (
-        <div className="search-results">
-          {showCurated && results.length === 0 && (
-            <p className="search-results-label">Start exploring</p>
+
+      {menuOpen && (
+        <div className="search-results" id="place-search-results">
+          {cleanQuery.length === 0 && recentResults.length > 0 && (
+            <p className="search-results-label">Recent places</p>
           )}
-          {visibleResults.map((result, index) => (
+          {cleanQuery.length >= 2 && localResults.length > 0 && (
+            <p className="search-results-label">
+              Irish townlands <span>Tailte Éireann</span>
+            </p>
+          )}
+          {visibleResults.map((result, index) => {
+            const isExternal =
+              index >= localResults.length && cleanQuery.length > 0;
+            return (
+              <button
+                key={`${result.source}-${result.id}`}
+                ref={(element) => {
+                  resultButtons.current[index] = element;
+                }}
+                type="button"
+                onClick={() => selectResult(result)}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    resultButtons.current[index + 1]?.focus();
+                  } else if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    if (index === 0) {
+                      event.currentTarget
+                        .closest(".search-panel")
+                        ?.querySelector<HTMLInputElement>("input")
+                        ?.focus();
+                    } else {
+                      resultButtons.current[index - 1]?.focus();
+                    }
+                  } else if (event.key === "Escape") {
+                    setMenuOpen(false);
+                  }
+                }}
+              >
+                <em>{isExternal ? "↗" : String(index + 1).padStart(2, "0")}</em>
+                <strong>{result.label}</strong>
+                <span>{result.detail}</span>
+              </button>
+            );
+          })}
+
+          {cleanQuery.length >= 2 && externalResults.length === 0 && (
             <button
-              key={result.id}
+              className="external-search-action"
               type="button"
-              onClick={() => {
-                onSelect(result);
-                setResults([]);
-                setQuery(result.label);
-                setShowCurated(false);
-              }}
+              onClick={() => void runExternalSearch()}
+              disabled={status === "searching"}
             >
-              <em>{String(index + 1).padStart(2, "0")}</em>
-              <strong>{result.label}</strong>
-              <span>{result.detail}</span>
+              <em>↗</em>
+              <strong>
+                {status === "searching"
+                  ? "Searching Ireland…"
+                  : `Search Ireland for “${cleanQuery}”`}
+              </strong>
+              <span>Settlements, addresses and landmarks via OpenStreetMap</span>
             </button>
-          ))}
+          )}
+
+          {status === "suggesting" && (
+            <p className="panel-note" role="status">Checking the townland index…</p>
+          )}
+          {status === "empty" && (
+            <p className="panel-note" role="status">
+              No place found. Try a nearby town, county, or alternate spelling.
+            </p>
+          )}
+          {status === "error" && (
+            <p className="panel-note" role="status">
+              Place search is temporarily unavailable. The map still works normally.
+            </p>
+          )}
+          {cleanQuery.length >= 2 && localResults.length > 0 && (
+            <p className="search-attribution">
+              Gazetteer data © Tailte Éireann, CC BY 4.0
+            </p>
+          )}
         </div>
       )}
     </section>
   );
 }
-
-const CURATED_PLACES: SearchResult[] = [
-  {
-    id: "curated-dublin",
-    label: "Medieval Dublin",
-    detail: "City walls, archaeology and architectural layers",
-    lat: 53.3438,
-    lng: -6.2675,
-  },
-  {
-    id: "curated-glendalough",
-    label: "Glendalough",
-    detail: "Monastic landscape in County Wicklow",
-    lat: 53.0105,
-    lng: -6.3272,
-  },
-  {
-    id: "curated-cobh",
-    label: "Cobh",
-    detail: "Maritime heritage and Cork Harbour",
-    lat: 51.8503,
-    lng: -8.2943,
-  },
-  {
-    id: "curated-clonmacnoise",
-    label: "Clonmacnoise",
-    detail: "Early medieval settlement beside the Shannon",
-    lat: 53.326,
-    lng: -7.986,
-  },
-  {
-    id: "curated-kilkenny",
-    label: "Kilkenny",
-    detail: "A dense historic town and medieval core",
-    lat: 52.6541,
-    lng: -7.2448,
-  },
-  {
-    id: "curated-galway",
-    label: "Galway",
-    detail: "Urban archaeology at Ireland's Atlantic edge",
-    lat: 53.274,
-    lng: -9.049,
-  },
-];

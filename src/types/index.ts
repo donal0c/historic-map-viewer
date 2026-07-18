@@ -53,6 +53,7 @@ export interface SearchResult {
   detail: string;
   lat: number;
   lng: number;
+  source?: "gazetteer" | "external" | "curated" | "recent" | "geolocation";
 }
 
 export interface HeritageFeature {

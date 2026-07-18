@@ -104,7 +104,7 @@ test("searches for an Irish place and restores it from the share URL", async ({
 
   await page.goto("/");
   await page.getByRole("textbox", { name: "Search place" }).fill("Ballinasloe");
-  await page.getByRole("button", { name: "Search for place" }).click();
+  await page.getByRole("button", { name: "Search beyond townlands" }).click();
   await expect(
     page.getByRole("button", { name: /Ballinasloe, County Galway/ }),
   ).toBeVisible();
@@ -124,6 +124,50 @@ test("searches for an Irish place and restores it from the share URL", async ({
   await expect(page.getByRole("textbox", { name: "Search place" })).toHaveValue(
     "Ballinasloe, County Galway",
   );
+});
+
+test("autocompletes Irish and English townland names without an external request", async ({
+  page,
+}) => {
+  await mockPublicSources(page);
+  let externalSearches = 0;
+  await page.route("**/data/places/b.json", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        [
+          "40641",
+          "Ballymore",
+          "An Baile Mór",
+          "Cork",
+          "Corcaigh",
+          51.98,
+          -8.26,
+        ],
+      ]),
+    });
+  });
+  await page.route(/nominatim\.openstreetmap\.org\/search/, async (route) => {
+    externalSearches += 1;
+    await route.fulfill({ status: 200, body: "[]" });
+  });
+
+  await page.goto("/");
+  const input = page.getByRole("textbox", { name: "Search place" });
+  await input.fill("Baile Mór");
+  await expect(page.locator(".search-results-label")).toContainText(
+    "Irish townlands",
+  );
+  await input.press("ArrowDown");
+  await expect(
+    page.getByRole("button", { name: /An Baile Mór Ballymore/ }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(input).toHaveValue("An Baile Mór");
+  expect(externalSearches).toBe(0);
+  await expect(page).toHaveURL(/51\.98000,-8\.26000/);
 });
 
 test("keeps one map runtime and does not refetch evidence across modes", async ({

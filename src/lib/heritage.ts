@@ -130,6 +130,7 @@ export function normalisePlaceSearchRows(
       detail: row.display_name,
       lat: Number(row.lat),
       lng: Number(row.lon),
+      source: "external" as const,
     }))
     .filter((row) => Number.isFinite(row.lat) && Number.isFinite(row.lng));
 }
