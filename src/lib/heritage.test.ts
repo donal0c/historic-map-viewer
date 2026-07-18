@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   deduplicateHeritageFeatures,
+  heritageQueryCell,
   searchPlaces,
 } from "./heritage";
 import type { HeritageFeature, HeritageLayerId } from "../types";
@@ -102,5 +103,32 @@ describe("searchPlaces", () => {
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
       "/api/search?q=Ballinasloe",
     );
+  });
+});
+
+describe("heritageQueryCell", () => {
+  it("reuses a stable request cell for small pans", () => {
+    const initial = heritageQueryCell(53.5, -8, 10, ["smr", "niah"]);
+    const nearby = heritageQueryCell(
+      initial.lat + 0.001,
+      initial.lng + 0.001,
+      10,
+      ["smr", "niah"],
+    );
+
+    expect(nearby.key).toBe(initial.key);
+    expect(initial.fetchRadiusMeters).toBeGreaterThan(initial.radiusMeters);
+  });
+
+  it("moves to a new request cell after a meaningful pan", () => {
+    const initial = heritageQueryCell(53.5, -8, 10, ["smr"]);
+    const distant = heritageQueryCell(
+      initial.lat + 0.1,
+      initial.lng,
+      10,
+      ["smr"],
+    );
+
+    expect(distant.key).not.toBe(initial.key);
   });
 });

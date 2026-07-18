@@ -275,9 +275,25 @@ test("loads optional public evidence only after a preset is enabled", async ({
     "/#53.50000,-8.00000,10,6inch-1st,osm,0.70,overlay,normal",
   );
   await expect(page.getByRole("button", { name: /Evidence 3/ })).toBeVisible();
+  const existingMarker = page.locator(".heritage-marker-smr");
+  await expect(existingMarker).toHaveCount(1);
+  await existingMarker.evaluate((element) => {
+    element.setAttribute("data-render-identity", "preserved");
+  });
   const initialRequests = requestCount();
 
   await page.getByRole("button", { name: /Evidence/ }).click();
+  const wrecks = page.getByRole("checkbox", {
+    name: /Wreck Inventory of Ireland/,
+  });
+  await wrecks.check();
+  await expect(wrecks).toBeChecked();
+  await expect(page.getByRole("button", { name: /Evidence 4/ })).toBeVisible();
+  await expect(existingMarker).toHaveAttribute(
+    "data-render-identity",
+    "preserved",
+  );
+
   await page.getByRole("button", { name: "Maritime", exact: true }).click();
 
   await expect(

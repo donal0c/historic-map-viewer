@@ -10,7 +10,10 @@ import type {
 import { IRELAND_BOUNDS } from "../../config/map";
 import { basemapLayers, findLayer, historicalLayers } from "../../config/layers";
 import { createHistoricalLayer } from "../../lib/createHistoricalLayer";
-import { addHeritageLayerToMap } from "../../lib/mapHeritageLayer";
+import {
+  addHeritageLayerToMap,
+  type HeritageLayerController,
+} from "../../lib/mapHeritageLayer";
 import type { NlsTileOutcome } from "../../lib/compositeLayer";
 import { heritageSourceById } from "../../config/heritageSources";
 
@@ -63,8 +66,8 @@ export default function MapRuntime({
   const secondaryBasemapRef = useRef<L.TileLayer | null>(null);
   const historicalLayerRef = useRef<L.GridLayer | null>(null);
   const secondaryHistoricalRef = useRef<L.GridLayer | null>(null);
-  const primaryHeritageRef = useRef<L.LayerGroup | null>(null);
-  const secondaryHeritageRef = useRef<L.LayerGroup | null>(null);
+  const primaryHeritageRef = useRef<HeritageLayerController | null>(null);
+  const secondaryHeritageRef = useRef<HeritageLayerController | null>(null);
   const selectionRef = useRef<L.GeoJSON | null>(null);
   const externalViewUpdateRef = useRef(false);
   const synchronizingMapsRef = useRef(false);
@@ -107,6 +110,8 @@ export default function MapRuntime({
     primaryMapRef.current = map;
 
     return () => {
+      primaryHeritageRef.current?.remove();
+      primaryHeritageRef.current = null;
       map.off("moveend", publishView);
       map.remove();
       primaryMapRef.current = null;
@@ -278,13 +283,15 @@ export default function MapRuntime({
   useEffect(() => {
     const map = primaryMapRef.current;
     if (!map) return;
-    primaryHeritageRef.current?.remove();
-    primaryHeritageRef.current = addHeritageLayerToMap(
-      map,
-      heritageData,
-      onSelectFeature,
-    );
-
+    if (primaryHeritageRef.current) {
+      primaryHeritageRef.current.update(heritageData, onSelectFeature);
+    } else {
+      primaryHeritageRef.current = addHeritageLayerToMap(
+        map,
+        heritageData,
+        onSelectFeature,
+      );
+    }
   }, [heritageData, onSelectFeature]);
 
   useEffect(() => {
@@ -355,6 +362,8 @@ export default function MapRuntime({
   useEffect(() => {
     if (state.mode !== "side-by-side") {
       const hadSecondaryMap = Boolean(secondaryMapRef.current);
+      secondaryHeritageRef.current?.remove();
+      secondaryHeritageRef.current = null;
       secondaryMapRef.current?.remove();
       secondaryMapRef.current = null;
       secondaryBasemapRef.current = null;
@@ -421,6 +430,8 @@ export default function MapRuntime({
 
     return () => {
       window.clearTimeout(initializationTimer);
+      secondaryHeritageRef.current?.remove();
+      secondaryHeritageRef.current = null;
       secondary.off("move", syncPrimary);
       secondary.off("moveend", publishSecondaryView);
       primary.off("move", syncSecondary);
@@ -452,13 +463,16 @@ export default function MapRuntime({
 
   useEffect(() => {
     const map = secondaryMapRef.current;
-    secondaryHeritageRef.current?.remove();
     if (!map || state.mode !== "side-by-side") return;
-    secondaryHeritageRef.current = addHeritageLayerToMap(
-      map,
-      heritageData,
-      onSelectFeature,
-    );
+    if (secondaryHeritageRef.current) {
+      secondaryHeritageRef.current.update(heritageData, onSelectFeature);
+    } else {
+      secondaryHeritageRef.current = addHeritageLayerToMap(
+        map,
+        heritageData,
+        onSelectFeature,
+      );
+    }
   }, [heritageData, onSelectFeature, state.mode]);
 
   useEffect(() => {

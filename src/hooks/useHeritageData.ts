@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { LatLngTuple } from "leaflet";
 import type { HeritageData, HeritageLayerId } from "../types";
-import { fetchHeritageData, radiusForZoom } from "../lib/heritage";
+import {
+  fetchHeritageData,
+  heritageQueryCell,
+  radiusForZoom,
+} from "../lib/heritage";
 
 export function useHeritageData(
   center: LatLngTuple,
@@ -15,17 +19,16 @@ export function useHeritageData(
     sources: {},
   });
 
-  const key = useMemo(
-    () =>
-      `${center[0].toFixed(3)},${center[1].toFixed(3)},${zoom}:${enabledSourceIds.join(",")}`,
+  const query = useMemo(
+    () => heritageQueryCell(center[0], center[1], zoom, enabledSourceIds),
     [center, enabledSourceIds, zoom],
   );
 
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
-    setData({
-      features: data.features,
+    setData((previous) => ({
+      features: previous.features,
       status: "loading",
       radiusMeters: radiusForZoom(zoom),
       sources: Object.fromEntries(
@@ -33,11 +36,11 @@ export function useHeritageData(
           id,
           {
             status: "loading",
-            count: data.sources[id]?.count ?? 0,
+            count: previous.sources[id]?.count ?? 0,
           },
         ]),
       ),
-    });
+    }));
 
     const timer = window.setTimeout(() => {
       fetchHeritageData(
@@ -68,10 +71,9 @@ export function useHeritageData(
       controller.abort();
       window.clearTimeout(timer);
     };
-    // Data from the previous settled view remains visible while the next
+    // Data from the previous settled query cell remains visible while the next
     // abortable request is in flight.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [query.key]);
 
   return data;
 }
