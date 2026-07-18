@@ -410,6 +410,489 @@ select:focus-visible {
   border-top: 1px solid rgba(37, 42, 34, 0.1);
 }
 
+/* Editorial atlas entry */
+
+.explore-panel {
+  position: absolute;
+  top: 154px;
+  left: 70px;
+  z-index: 999;
+  width: min(830px, calc(100vw - 454px));
+  max-height: calc(100vh - 174px);
+  overflow: auto;
+  border: 1px solid rgba(43, 47, 38, 0.16);
+  border-radius: 18px;
+  padding: 23px 24px 14px;
+  color: var(--ink);
+  background:
+    linear-gradient(rgba(255, 252, 243, 0.96), rgba(246, 240, 226, 0.97)),
+    var(--paper);
+  box-shadow: 0 32px 90px rgba(16, 19, 14, 0.34);
+  animation: atlas-sheet-in 360ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.explore-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.explore-header .eyebrow,
+.explore-section-label {
+  color: var(--accent);
+}
+
+.explore-header h2 {
+  margin: 4px 0 0;
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: clamp(25px, 3vw, 38px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.icon-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink);
+  background: transparent;
+  font-family: Georgia, serif;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.explore-composition {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.75fr);
+  gap: 20px;
+}
+
+.featured-story {
+  position: relative;
+  min-height: 286px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 3px;
+  padding: 0;
+  text-align: left;
+  color: #fffaf0;
+  background: #4c5147;
+  cursor: pointer;
+  isolation: isolate;
+}
+
+.featured-story > img {
+  position: absolute;
+  inset: -4%;
+  width: 108%;
+  height: 108%;
+  object-fit: cover;
+  filter: saturate(0.72) contrast(1.04);
+  opacity: 0;
+  transition:
+    opacity 380ms ease,
+    transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 400ms ease;
+}
+
+.explore-panel.images-ready .featured-story > img,
+.explore-panel.images-ready .destination-strip img {
+  opacity: 1;
+}
+
+.featured-story:hover > img,
+.featured-story:focus-visible > img {
+  transform: scale(1.045);
+  filter: saturate(0.9) contrast(1.08);
+}
+
+.featured-story-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(17, 22, 18, 0.88) 0%, rgba(17, 22, 18, 0.6) 52%, rgba(17, 22, 18, 0.08) 100%),
+    linear-gradient(0deg, rgba(17, 22, 18, 0.6), transparent 55%);
+}
+
+.featured-story-copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(75%, 380px);
+  min-height: 286px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 26px;
+}
+
+.featured-story-copy em,
+.featured-story-copy b,
+.featured-story-number {
+  font-family: "Avenir Next", Avenir, sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.featured-story-copy em {
+  margin-bottom: auto;
+  color: #d9cbb1;
+  font-size: 8px;
+}
+
+.featured-story-copy strong {
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: clamp(29px, 3.3vw, 45px);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+}
+
+.featured-story-copy > span {
+  margin-top: 12px;
+  color: rgba(255, 250, 240, 0.82);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.featured-story-copy b {
+  margin-top: 18px;
+  color: #fffaf0;
+  font-size: 9px;
+}
+
+.featured-story-copy b i {
+  margin-left: 6px;
+  font-style: normal;
+}
+
+.featured-story-number {
+  position: absolute;
+  top: 20px;
+  right: 21px;
+  z-index: 2;
+  color: rgba(255, 250, 240, 0.65);
+  font-size: 10px;
+}
+
+.explore-section-label {
+  margin: 0 0 6px;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.story-index {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.story-index > button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 14px 2px;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.story-index > button:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
+
+.story-index > button:hover strong,
+.story-index > button:focus-visible strong {
+  color: var(--accent);
+}
+
+.story-index button > em,
+.story-index button > i {
+  color: var(--accent);
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.story-index button > span {
+  display: grid;
+  gap: 3px;
+}
+
+.story-index button strong {
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.05;
+}
+
+.story-index button small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.near-me-action {
+  margin-top: auto;
+}
+
+.location-note {
+  margin: 8px 0 0;
+  color: var(--vermilion);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.destination-strip {
+  margin-top: 18px;
+}
+
+.destination-strip > div {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  background: rgba(51, 56, 46, 0.16);
+}
+
+.destination-strip button {
+  position: relative;
+  min-width: 0;
+  height: 86px;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  color: #fffaf0;
+  background: #55594f;
+  cursor: pointer;
+}
+
+.destination-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  filter: saturate(0.55) contrast(1.04);
+  transition: opacity 380ms ease, transform 360ms ease, filter 360ms ease;
+}
+
+.destination-strip button::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(0deg, rgba(18, 22, 18, 0.82), transparent 72%);
+}
+
+.destination-strip button:hover img,
+.destination-strip button:focus-visible img {
+  transform: scale(1.07);
+  filter: saturate(0.9) contrast(1.08);
+}
+
+.destination-strip button span {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  z-index: 1;
+  display: grid;
+  gap: 1px;
+}
+
+.destination-strip button em {
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.destination-strip button strong {
+  overflow: hidden;
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explore-panel footer {
+  margin-top: 11px;
+  color: #7b7e74;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+/* Guided map stories */
+
+.story-player {
+  position: absolute;
+  top: 154px;
+  left: 70px;
+  z-index: 999;
+  width: min(380px, calc(100vw - 454px));
+  border: 1px solid rgba(43, 47, 38, 0.16);
+  border-radius: 16px;
+  padding: 0 20px 18px;
+  color: var(--ink);
+  background: rgba(251, 248, 239, 0.97);
+  box-shadow: 0 25px 75px rgba(16, 19, 14, 0.3);
+  animation: atlas-sheet-in 300ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.story-progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  height: 4px;
+  margin: 0 -20px 17px;
+}
+
+.story-progress span {
+  background: #d5d0c4;
+  transition: background 240ms ease;
+}
+
+.story-progress span.active {
+  background: var(--vermilion);
+}
+
+.story-player > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.story-player header > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.story-player header > div:first-child > strong {
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.story-player .eyebrow {
+  color: var(--accent);
+}
+
+.story-header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.story-header-actions button {
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 9px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.story-header-actions button:last-child {
+  width: 30px;
+  padding: 0;
+  font-family: Georgia, serif;
+  font-size: 18px;
+}
+
+.story-copy {
+  padding: 24px 0 21px;
+  animation: story-copy-in 330ms ease both;
+}
+
+.story-copy h2 {
+  margin: 0;
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: clamp(29px, 3vw, 40px);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+.story-copy p {
+  margin: 14px 0;
+  color: #42483e;
+  font-size: 12px;
+  line-height: 1.58;
+}
+
+.story-copy small {
+  display: block;
+  border-left: 2px solid var(--accent);
+  padding-left: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.story-player nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.story-player nav button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.story-player nav button:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.story-player nav .story-primary-action {
+  color: #fffaf0;
+  background: var(--vermilion);
+}
+
+@keyframes atlas-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+@keyframes story-copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+}
+
 .map-toolbar {
   display: grid;
   grid-template-columns: minmax(220px, 1.2fr) minmax(130px, 0.75fr);
@@ -1260,6 +1743,11 @@ select:focus-visible {
   .map-legend {
     display: none;
   }
+
+  .explore-panel {
+    width: calc(100vw - 140px);
+    max-height: calc(100vh - 246px);
+  }
 }
 
 @media (max-width: 780px) {
@@ -1291,6 +1779,11 @@ select:focus-visible {
   .search-panel h1 {
     margin: 0;
     font-size: clamp(19px, 5vw, 24px);
+  }
+
+  .atlas-open-button {
+    padding: 6px 9px;
+    font-size: 8px;
   }
 
   .search-form button {
@@ -1534,15 +2027,115 @@ select:focus-visible {
   .comparison-label {
     top: 150px;
   }
+
+  .explore-panel {
+    position: absolute;
+    top: 132px;
+    right: 8px;
+    bottom: 66px;
+    left: 8px;
+    width: auto;
+    max-height: none;
+    border-radius: 14px;
+    padding: 18px 17px 12px;
+  }
+
+  .explore-header {
+    margin-bottom: 14px;
+  }
+
+  .explore-header h2 {
+    font-size: 28px;
+  }
+
+  .explore-composition {
+    display: block;
+  }
+
+  .featured-story,
+  .featured-story-copy {
+    min-height: 218px;
+  }
+
+  .featured-story-copy {
+    width: 78%;
+    padding: 19px;
+  }
+
+  .featured-story-copy strong {
+    font-size: 33px;
+  }
+
+  .featured-story-copy > span {
+    display: none;
+  }
+
+  .story-index {
+    margin-top: 16px;
+  }
+
+  .destination-strip > div {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+
+  .destination-strip button {
+    width: 126px;
+    flex: 0 0 126px;
+    scroll-snap-align: start;
+  }
+
+  .story-player {
+    top: auto;
+    right: 8px;
+    bottom: 66px;
+    left: 8px;
+    width: auto;
+    border-radius: 14px;
+    padding: 0 18px 16px;
+  }
+
+  .story-progress {
+    margin-inline: -18px;
+  }
+
+  .story-copy {
+    padding-block: 18px 16px;
+  }
+
+  .story-copy h2 {
+    font-size: 31px;
+  }
+
+  .has-story .place-dossier,
+  .has-story .layer-catalogue-shell,
+  .has-story .opacity-control {
+    display: none;
+  }
 }
 
 @media (max-width: 430px) {
   .search-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .search-panel h1 {
     display: none;
+  }
+
+  .search-panel-heading > div {
+    display: none;
+  }
+
+  .atlas-open-button {
+    width: 44px;
+    height: 43px;
+    overflow: hidden;
+    padding: 0 5px;
+    border-color: rgba(250, 245, 231, 0.14);
+    border-radius: 10px;
+    font-size: 7px;
   }
 
   .search-form button {

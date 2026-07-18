@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMapState } from "./hooks/useMapState";
 import { useHashSync } from "./hooks/useHashSync";
 import { useHeritageData } from "./hooks/useHeritageData";
@@ -10,8 +10,16 @@ import MapToolbar from "./components/ui/MapToolbar";
 import PlaceDossier from "./components/ui/PlaceDossier";
 import MapLegend from "./components/ui/MapLegend";
 import LayerCatalogue from "./components/ui/LayerCatalogue";
+import ExplorePanel from "./components/ui/ExplorePanel";
+import StoryPlayer from "./components/ui/StoryPlayer";
 import { defaultHeritageSourceIds } from "./config/heritageSources";
 import { decodeHeritageSourceIds } from "./lib/hash";
+import {
+  atlasDestinations,
+  atlasStories,
+  readStoryRoute,
+  storyUrl,
+} from "./data/stories";
 import type {
   HeritageFeature,
   HeritageLayerId,
@@ -45,6 +53,15 @@ export default function App() {
   const [selectedFeature, setSelectedFeature] = useState<HeritageFeature | null>(
     null
   );
+  const [activeStoryRoute, setActiveStoryRoute] = useState(() =>
+    readStoryRoute(window.location.search),
+  );
+  const [exploreOpen, setExploreOpen] = useState(
+    () => window.location.hash.length === 0 && !readStoryRoute(window.location.search),
+  );
+  const [locateStatus, setLocateStatus] = useState<
+    "idle" | "locating" | "denied" | "error"
+  >("idle");
   const [historicalReadiness, setHistoricalReadiness] =
     useState<HistoricalReadiness>({
       status: "idle",
@@ -65,6 +82,54 @@ export default function App() {
 
   const showOpacity = state.mode === "overlay" || state.mode === "spyglass";
 
+  const applyStoryStep = useCallback(
+    (storyId: string, stepIndex: number) => {
+      const story = atlasStories.find((candidate) => candidate.id === storyId);
+      const step = story?.steps[stepIndex];
+      if (!story || !step) return;
+      setState((current) => ({
+        ...current,
+        center: step.center,
+        zoom: step.zoom,
+        placeLabel: story.place,
+        activeLayerId: step.activeLayerId,
+        mode: step.mode,
+        blendMode: step.blendMode ?? current.blendMode,
+        opacity: step.opacity ?? current.opacity,
+      }));
+      setEnabledHeritageSources(step.enabledSources);
+      setSelectedFeature(null);
+      setExploreOpen(false);
+    },
+    [setState],
+  );
+
+  useEffect(() => {
+    if (activeStoryRoute) {
+      applyStoryStep(
+        activeStoryRoute.storyId,
+        activeStoryRoute.stepIndex,
+      );
+    }
+    // The initial deep link is applied once; later navigation calls apply directly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const route = readStoryRoute(window.location.search);
+      setActiveStoryRoute(route);
+      if (route) applyStoryStep(route.storyId, route.stepIndex);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [applyStoryStep]);
+
+  const leaveStory = useCallback((historyMode: "push" | "replace" = "push") => {
+    setActiveStoryRoute(null);
+    window.history[`${historyMode}State`](null, "", storyUrl(null));
+  }, []);
+
   const handleSearchSelect = useCallback(
     (result: SearchResult) => {
       setState((current) => ({
@@ -74,9 +139,65 @@ export default function App() {
         placeLabel: result.label,
       }));
       setSelectedFeature(null);
+      setExploreOpen(false);
+      leaveStory("replace");
     },
-    [setState]
+    [leaveStory, setState]
   );
+
+  const startStory = useCallback(
+    (storyId: string) => {
+      const route = { storyId, stepIndex: 0 };
+      setActiveStoryRoute(route);
+      applyStoryStep(route.storyId, route.stepIndex);
+      window.history.pushState(null, "", storyUrl(storyId, 0));
+    },
+    [applyStoryStep],
+  );
+
+  const changeStoryStep = useCallback(
+    (stepIndex: number) => {
+      if (!activeStoryRoute) return;
+      const story = atlasStories.find(
+        (candidate) => candidate.id === activeStoryRoute.storyId,
+      );
+      if (!story || stepIndex < 0 || stepIndex >= story.steps.length) return;
+      const route = { storyId: story.id, stepIndex };
+      setActiveStoryRoute(route);
+      applyStoryStep(route.storyId, route.stepIndex);
+      window.history.pushState(
+        null,
+        "",
+        storyUrl(route.storyId, route.stepIndex),
+      );
+    },
+    [activeStoryRoute, applyStoryStep],
+  );
+
+  const locateUser = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocateStatus("error");
+      return;
+    }
+    setLocateStatus("locating");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        handleSearchSelect({
+          id: "current-location",
+          label: "Near you",
+          detail: "Approximate location from this device",
+          lat: coords.latitude,
+          lng: coords.longitude,
+          source: "geolocation",
+        });
+        setLocateStatus("idle");
+      },
+      (error) => {
+        setLocateStatus(error.code === error.PERMISSION_DENIED ? "denied" : "error");
+      },
+      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 300_000 },
+    );
+  }, [handleSearchSelect]);
 
   const handleHeritageSourcesChange = useCallback(
     (sourceIds: HeritageLayerId[]) => {
@@ -91,7 +212,7 @@ export default function App() {
   );
 
   return (
-    <div className={`app-shell${selectedFeature ? " has-selection" : ""}`}>
+    <div className={`app-shell${selectedFeature ? " has-selection" : ""}${activeStoryRoute ? " has-story" : ""}`}>
       <MapShell
         state={state}
         heritageData={heritageData}
@@ -106,6 +227,7 @@ export default function App() {
           placeLabel={state.placeLabel}
           onSelect={handleSearchSelect}
           onSearchStart={() => setSelectedFeature(null)}
+          onExplore={() => setExploreOpen(true)}
         />
         <MapToolbar
           state={state}
@@ -115,6 +237,35 @@ export default function App() {
           onBlendModeChange={setBlendMode}
         />
       </div>
+
+      <ExplorePanel
+        open={exploreOpen}
+        imagesReady={
+          historicalReadiness.status !== "idle" &&
+          historicalReadiness.status !== "loading"
+        }
+        stories={atlasStories}
+        destinations={atlasDestinations}
+        locateStatus={locateStatus}
+        onClose={() => setExploreOpen(false)}
+        onSelectDestination={handleSearchSelect}
+        onStartStory={startStory}
+        onLocate={locateUser}
+      />
+
+      {activeStoryRoute && (
+        <StoryPlayer
+          story={
+            atlasStories.find(
+              (story) => story.id === activeStoryRoute.storyId,
+            ) ?? atlasStories[0]
+          }
+          stepIndex={activeStoryRoute.stepIndex}
+          onStepChange={changeStoryStep}
+          onExit={() => leaveStory()}
+          onShare={() => void shareCurrentView()}
+        />
+      )}
 
       <PlaceDossier
         state={state}

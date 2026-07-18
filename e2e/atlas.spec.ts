@@ -103,7 +103,7 @@ test("searches for an Irish place and restores it from the share URL", async ({
   });
 
   await page.goto("/");
-  await page.getByRole("textbox", { name: "Search place" }).fill("Ballinasloe");
+  await page.getByRole("combobox", { name: "Search place" }).fill("Ballinasloe");
   await page.getByRole("button", { name: "Search beyond townlands" }).click();
   await expect(
     page.getByRole("button", { name: /Ballinasloe, County Galway/ }),
@@ -112,7 +112,7 @@ test("searches for an Irish place and restores it from the share URL", async ({
     .getByRole("button", { name: /Ballinasloe, County Galway/ })
     .click();
 
-  await expect(page.getByRole("textbox", { name: "Search place" })).toHaveValue(
+  await expect(page.getByRole("combobox", { name: "Search place" })).toHaveValue(
     "Ballinasloe, County Galway",
   );
   await expect(page).toHaveURL(/53\.33027,-8\.22138/);
@@ -121,7 +121,7 @@ test("searches for an Irish place and restores it from the share URL", async ({
   const sharedUrl = page.url();
   await page.reload();
   await expect(page).toHaveURL(sharedUrl);
-  await expect(page.getByRole("textbox", { name: "Search place" })).toHaveValue(
+  await expect(page.getByRole("combobox", { name: "Search place" })).toHaveValue(
     "Ballinasloe, County Galway",
   );
 });
@@ -154,7 +154,7 @@ test("autocompletes Irish and English townland names without an external request
   });
 
   await page.goto("/");
-  const input = page.getByRole("textbox", { name: "Search place" });
+  const input = page.getByRole("combobox", { name: "Search place" });
   await input.fill("Baile Mór");
   await expect(page.locator(".search-results-label")).toContainText(
     "Irish townlands",
@@ -168,6 +168,87 @@ test("autocompletes Irish and English townland names without an external request
   await expect(input).toHaveValue("An Baile Mór");
   expect(externalSearches).toBe(0);
   await expect(page).toHaveURL(/51\.98000,-8\.26000/);
+});
+
+test("opens a curated place and uses geolocation only after an explicit action", async ({
+  page,
+}) => {
+  await mockPublicSources(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: {
+        getCurrentPosition: (
+          success: (position: GeolocationPosition) => void,
+        ) =>
+          success({
+            coords: {
+              latitude: 52.6541,
+              longitude: -7.2448,
+              accuracy: 50,
+              altitude: null,
+              altitudeAccuracy: null,
+              heading: null,
+              speed: null,
+              toJSON: () => ({}),
+            },
+            timestamp: Date.now(),
+            toJSON: () => ({}),
+          }),
+      },
+    });
+  });
+
+  await page.goto("/");
+  await expect(
+    page.getByRole("complementary", { name: "Explore the atlas" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "1839–1900 Kilkenny", exact: true })
+    .click();
+  await expect(page.getByRole("combobox", { name: "Search place" })).toHaveValue(
+    "Kilkenny",
+  );
+
+  await page.getByRole("button", { name: "Open atlas" }).click();
+  await page
+    .getByRole("button", {
+      name: "Explore near me Your location stays in this browser",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole("combobox", { name: "Search place" })).toHaveValue(
+    "Near you",
+  );
+  await expect(page).toHaveURL(/52\.65410,-7\.24480/);
+});
+
+test("deep-links every story step and restores it through browser history", async ({
+  page,
+}) => {
+  await mockPublicSources(page);
+  await page.goto("/?story=dublin-redrawn&step=1");
+
+  await expect(
+    page.getByRole("heading", { name: "A city fixed on paper" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Overlay", exact: true })).toHaveClass(
+    /active/,
+  );
+  await page.getByRole("button", { name: "Next stop →" }).click();
+  await expect(
+    page.getByRole("heading", { name: "The revised city" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/story=dublin-redrawn&step=2/);
+  await expect(page.getByRole("button", { name: "Swipe", exact: true })).toHaveClass(
+    /active/,
+  );
+
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { name: "A city fixed on paper" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/story=dublin-redrawn&step=1/);
 });
 
 test("keeps one map runtime and does not refetch evidence across modes", async ({
@@ -429,6 +510,31 @@ test("restores compact share state and has no serious accessibility violations",
     ["serious", "critical"].includes(violation.impact ?? ""),
   );
   expect(serious).toEqual([]);
+});
+
+test("keeps the welcome atlas and guided story free of serious accessibility violations", async ({
+  page,
+}) => {
+  await mockPublicSources(page);
+  await page.goto("/");
+  await page.addScriptTag({ content: axe.source });
+
+  const seriousViolations = async () =>
+    page.evaluate(async () => {
+      const results = await window.axe.run(document, {
+        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+      });
+      return results.violations.filter((violation) =>
+        ["serious", "critical"].includes(violation.impact ?? ""),
+      );
+    });
+
+  expect(await seriousViolations()).toEqual([]);
+  await page.locator(".featured-story").click();
+  await expect(
+    page.getByRole("heading", { name: "A city fixed on paper" }),
+  ).toBeVisible();
+  expect(await seriousViolations()).toEqual([]);
 });
 
 test("clusters dense points and renders route and area evidence", async ({

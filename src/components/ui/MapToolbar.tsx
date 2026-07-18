@@ -98,6 +98,7 @@ export default function MapToolbar({
         <div className="toolbar-group blend">
           <span className="toolbar-label">Blend</span>
           <select
+            aria-label="Historical map blend mode"
             value={state.blendMode}
             onChange={(event) => onBlendModeChange(event.target.value as BlendMode)}
           >

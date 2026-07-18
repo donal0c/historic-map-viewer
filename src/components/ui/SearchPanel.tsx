@@ -37,12 +37,16 @@ export default function SearchPanel({
   const [menuOpen, setMenuOpen] = useState(false);
   const [status, setStatus] = useState<SearchStatus>("idle");
   const resultButtons = useRef<Array<HTMLButtonElement | null>>([]);
+  const inputFocused = useRef(false);
   const cleanQuery = query.trim();
   const visibleResults =
     cleanQuery.length === 0 ? recentResults : [...localResults, ...externalResults];
 
   useEffect(() => {
-    if (placeLabel) setQuery(placeLabel);
+    if (placeLabel) {
+      setQuery(placeLabel);
+      setMenuOpen(false);
+    }
   }, [placeLabel]);
 
   useEffect(() => {
@@ -61,13 +65,13 @@ export default function SearchPanel({
           if (!active) return;
           setLocalResults(results);
           setStatus("idle");
-          setMenuOpen(true);
+          if (inputFocused.current) setMenuOpen(true);
         })
         .catch(() => {
           if (!active) return;
           setLocalResults([]);
           setStatus("error");
-          setMenuOpen(true);
+          if (inputFocused.current) setMenuOpen(true);
         });
     }, 140);
 
@@ -133,7 +137,15 @@ export default function SearchPanel({
       <form onSubmit={submit} className="search-form" role="search">
         <input
           value={query}
-          onFocus={() => setMenuOpen(true)}
+          onFocus={() => {
+            inputFocused.current = true;
+            setMenuOpen(true);
+          }}
+          onBlur={() => {
+            window.setTimeout(() => {
+              inputFocused.current = false;
+            }, 0);
+          }}
           onKeyDown={handleInputKeyDown}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -141,6 +153,7 @@ export default function SearchPanel({
           }}
           placeholder="Townland, village or landmark…"
           aria-label="Search place"
+          role="combobox"
           aria-autocomplete="list"
           aria-controls="place-search-results"
           aria-expanded={menuOpen && (visibleResults.length > 0 || status !== "idle")}
