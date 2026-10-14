@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { BlendMode, HeritageData, MapState, ViewMode } from "../../types";
 import { basemapLayers } from "../../config/layers";
 import { viewModes } from "../../config/modes";
@@ -17,6 +18,19 @@ export default function MapToolbar({
   onBasemapChange,
   onBlendModeChange,
 }: MapToolbarProps) {
+  const moreMenuRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    // The compact "More" menu is a <details>; close it when the user taps
+    // anywhere else so it never sits open over the map.
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      const menu = moreMenuRef.current;
+      if (menu?.open && !menu.contains(event.target as Node)) menu.open = false;
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePress);
+  }, []);
+
   const activeSources = Object.values(heritageData.sources).filter(
     (source) => source?.status === "ready",
   ).length;
@@ -40,10 +54,12 @@ export default function MapToolbar({
       key={mode.id}
       type="button"
       className={state.mode === mode.id ? "active" : ""}
-      onClick={() => onModeChange(mode.id)}
+      onClick={() => {
+        onModeChange(mode.id);
+        if (moreMenuRef.current) moreMenuRef.current.open = false;
+      }}
       title={mode.description}
     >
-      <span aria-hidden="true">{mode.icon}</span>
       <span>{modeLabels[mode.id]}</span>
     </button>
   );
@@ -59,9 +75,8 @@ export default function MapToolbar({
           <div className="segmented compare-primary">
             {viewModes.slice(0, 2).map(renderModeButton)}
           </div>
-          <details className="compare-more">
+          <details className="compare-more" ref={moreMenuRef}>
             <summary className={state.mode === "side-by-side" || state.mode === "spyglass" ? "active" : ""}>
-              <span aria-hidden="true">•••</span>
               <span>
                 {state.mode === "side-by-side"
                   ? "Side"

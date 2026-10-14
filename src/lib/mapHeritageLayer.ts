@@ -31,6 +31,13 @@ export interface HeritageLayerController {
   remove(): void;
 }
 
+/** Point markers grow on touch screens so a fingertip can land on them. */
+const POINT_RADIUS =
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(pointer: coarse)").matches
+    ? 9
+    : 6;
+
 export function addHeritageLayerToMap(
   map: L.Map,
   data: HeritageData,
@@ -128,7 +135,7 @@ class IncrementalHeritageLayer implements HeritageLayerController {
       pointToLayer: (_geoFeature, latlng) =>
         L.circleMarker(latlng, {
           pane: "pointsPane",
-          radius: 6,
+          radius: POINT_RADIUS,
           color: "#fffaf0",
           fillColor: source.color,
           fillOpacity: 0.94,

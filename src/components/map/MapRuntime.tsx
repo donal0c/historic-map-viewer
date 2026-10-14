@@ -78,6 +78,7 @@ export default function MapRuntime({
   const selectionRef = useRef<L.GeoJSON | null>(null);
   const externalViewUpdateRef = useRef(false);
   const synchronizingMapsRef = useRef(false);
+  const lensPointRef = useRef<L.Point | null>(null);
   const [swipePosition, setSwipePosition] = useState(50);
 
   const basemap = useMemo(
@@ -110,6 +111,8 @@ export default function MapRuntime({
       minZoom: 6,
       maxZoom: 19,
       maxBounds: L.latLngBounds(IRELAND_BOUNDS).pad(0.32),
+      // A fast flick should glide, not fling the sheet thousands of pixels.
+      inertiaMaxSpeed: 1800,
     }).setView(state.center, state.zoom);
 
     createPanes(map);
@@ -170,6 +173,7 @@ export default function MapRuntime({
     primaryBasemapRef.current = L.tileLayer(basemap.url, {
       attribution: basemap.attribution,
       maxZoom: basemap.maxZoom,
+      maxNativeZoom: basemap.maxNativeZoom,
       pane: "basemapPane",
       updateWhenIdle: true,
       keepBuffer: 2,
@@ -405,6 +409,44 @@ export default function MapRuntime({
     state.zoom,
   ]);
 
+  const applyComparisonClip = useCallback(() => {
+    const map = primaryMapRef.current;
+    const pane = map?.getPane("historicalPane");
+    if (!map || !pane) return;
+    const ring = lensRingRef.current;
+
+    if (state.mode === "swipe") {
+      // Clip paths resolve against the pane's own box, which pans with the
+      // map, so the reveal edge is expressed in layer coordinates and
+      // recomputed whenever the map moves.
+      const size = map.getSize();
+      const origin = map.containerPointToLayerPoint([0, 0]);
+      const left = origin.x + (size.x * swipePosition) / 100;
+      const right = origin.x + size.x;
+      const top = origin.y;
+      const bottom = origin.y + size.y;
+      pane.style.clipPath = `polygon(${left}px ${top}px, ${right}px ${top}px, ${right}px ${bottom}px, ${left}px ${bottom}px)`;
+      return;
+    }
+
+    if (state.mode === "spyglass") {
+      const size = map.getSize();
+      const point =
+        lensPointRef.current ?? L.point(size.x / 2, size.y / 2);
+      lensPointRef.current = point;
+      const layerPoint = map.containerPointToLayerPoint(point);
+      pane.style.clipPath = `circle(var(--lens-radius) at ${layerPoint.x}px ${layerPoint.y}px)`;
+      if (ring) {
+        ring.style.transform = `translate3d(${point.x}px, ${point.y}px, 0) translate(-50%, -50%)`;
+        ring.dataset.visible = "true";
+      }
+      return;
+    }
+
+    pane.style.clipPath = "none";
+    if (ring) ring.dataset.visible = "false";
+  }, [state.mode, swipePosition]);
+
   useEffect(() => {
     const layer = historicalLayerRef.current;
     const map = primaryMapRef.current;
@@ -416,8 +458,13 @@ export default function MapRuntime({
       state.mode === "overlay" || state.mode === "spyglass"
         ? state.blendMode
         : "normal";
-    applyComparisonClip(pane, state.mode, swipePosition);
-  }, [state.mode, state.opacity, state.blendMode, swipePosition]);
+    if (state.mode !== "spyglass") lensPointRef.current = null;
+    applyComparisonClip();
+    map.on("move zoom zoomanim viewreset resize", applyComparisonClip);
+    return () => {
+      map.off("move zoom zoomanim viewreset resize", applyComparisonClip);
+    };
+  }, [applyComparisonClip, state.mode, state.opacity, state.blendMode, historical]);
 
   useEffect(() => {
     const map = primaryMapRef.current;
@@ -500,25 +547,23 @@ export default function MapRuntime({
 
   useEffect(() => {
     if (state.mode !== "side-by-side") {
-      const hadSecondaryMap = Boolean(secondaryMapRef.current);
       secondaryHeritageRef.current?.remove();
       secondaryHeritageRef.current = null;
       secondaryMapRef.current?.remove();
       secondaryMapRef.current = null;
       secondaryBasemapRef.current = null;
       secondaryHistoricalRef.current = null;
-      secondaryHeritageRef.current = null;
-      if (hadSecondaryMap) {
-        const resizeTimer = window.setTimeout(() => {
-          const primary = primaryMapRef.current;
-          if (!primary) return;
-          synchronizingMapsRef.current = true;
-          primary.invalidateSize({ pan: false });
-          synchronizingMapsRef.current = false;
-        }, 0);
-        return () => window.clearTimeout(resizeTimer);
-      }
-      return;
+      // The primary container changes width when the comparison layout
+      // changes, and nothing else tells Leaflet. Always remeasure after the
+      // new layout has been painted so the full viewport gets tiles.
+      const resizeTimer = window.setTimeout(() => {
+        const primary = primaryMapRef.current;
+        if (!primary) return;
+        synchronizingMapsRef.current = true;
+        primary.invalidateSize({ pan: false });
+        synchronizingMapsRef.current = false;
+      }, 0);
+      return () => window.clearTimeout(resizeTimer);
     }
 
     const container = secondaryContainerRef.current;
@@ -586,6 +631,7 @@ export default function MapRuntime({
     secondaryBasemapRef.current = L.tileLayer(basemap.url, {
       attribution: basemap.attribution,
       maxZoom: basemap.maxZoom,
+      maxNativeZoom: basemap.maxNativeZoom,
       pane: "basemapPane",
     }).addTo(map);
   }, [basemap, state.mode]);
@@ -617,35 +663,21 @@ export default function MapRuntime({
 
   useEffect(() => {
     const shell = shellRef.current;
-    const map = primaryMapRef.current;
-    if (!shell || !map) return;
+    if (!shell || state.mode !== "spyglass") return;
 
-    const moveLens = (clientX: number, clientY: number) => {
-      if (state.mode !== "spyglass") return;
+    const handlePointerMove = (event: PointerEvent) => {
       const rect = shell.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-      const pane = map.getPane("historicalPane");
-      if (pane) {
-        pane.style.clipPath = `circle(var(--lens-radius) at ${x}px ${y}px)`;
-      }
-      if (lensRingRef.current) {
-        lensRingRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
-        lensRingRef.current.dataset.visible = "true";
-      }
-    };
-    const handlePointerMove = (event: PointerEvent) =>
-      moveLens(event.clientX, event.clientY);
-    const handlePointerLeave = () => {
-      if (lensRingRef.current) lensRingRef.current.dataset.visible = "false";
+      lensPointRef.current = L.point(
+        event.clientX - rect.left,
+        event.clientY - rect.top,
+      );
+      applyComparisonClip();
     };
     shell.addEventListener("pointermove", handlePointerMove, { passive: true });
-    shell.addEventListener("pointerleave", handlePointerLeave);
     return () => {
       shell.removeEventListener("pointermove", handlePointerMove);
-      shell.removeEventListener("pointerleave", handlePointerLeave);
     };
-  }, [state.mode]);
+  }, [applyComparisonClip, state.mode]);
 
   return (
     <div
@@ -716,22 +748,4 @@ function historicalOpacity(state: MapState): number {
   if (state.mode === "side-by-side") return 0;
   if (state.mode === "swipe") return 1;
   return state.opacity;
-}
-
-function applyComparisonClip(
-  pane: HTMLElement,
-  mode: MapState["mode"],
-  swipePosition: number,
-) {
-  if (mode === "swipe") {
-    pane.style.clipPath = `inset(0 0 0 ${swipePosition}%)`;
-    return;
-  }
-  if (mode === "spyglass") {
-    if (!pane.style.clipPath.startsWith("circle")) {
-      pane.style.clipPath = "circle(0 at 50% 50%)";
-    }
-    return;
-  }
-  pane.style.clipPath = "none";
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { historicalLayers } from "../../config/layers";
+import { historicalLayers, layerSupportsZoom } from "../../config/layers";
 import {
   TIME_LAPSE_LABELS,
   TIME_LAPSE_LAYER_IDS,
@@ -10,6 +10,7 @@ import type { HistoricalReadiness } from "../../types";
 
 interface TimelineRailProps {
   value: string;
+  zoom: number;
   enabled: boolean;
   isPlaying: boolean;
   playbackState: "idle" | "playing" | "paused" | "complete";
@@ -38,6 +39,7 @@ const timelineLayers = TIME_LAPSE_LAYER_IDS.map(
 
 export default function TimelineRail({
   value,
+  zoom,
   enabled,
   isPlaying,
   playbackState,
@@ -125,18 +127,31 @@ export default function TimelineRail({
 
       <section className="timeline-rail" aria-label="Historic map timeline">
         <div className="timeline-track" />
-        {timelineLayers.map((layer) => (
-          <button
-            key={layer.id}
-            type="button"
-            className={value === layer.id ? "active" : ""}
-            aria-current={value === layer.id ? "true" : undefined}
-            onClick={() => onChange(layer.id)}
-            title={layer.description}
-          >
-            <span>{ERA_LABELS[layer.id] ?? layer.name}</span>
-          </button>
-        ))}
+        {timelineLayers.map((layer) => {
+          const drawnHere = layerSupportsZoom(layer, zoom);
+          const drawnState = drawnHere
+            ? "true"
+            : zoom > layer.maxZoom
+              ? "zoom-out"
+              : "zoom-in";
+          return (
+            <button
+              key={layer.id}
+              type="button"
+              className={value === layer.id ? "active" : ""}
+              aria-current={value === layer.id ? "true" : undefined}
+              data-drawn={drawnState}
+              onClick={() => onChange(layer.id)}
+              title={
+                drawnHere
+                  ? layer.description
+                  : `${layer.name} is drawn at zoom ${layer.minZoom ?? 6}–${layer.maxZoom}. Selecting it zooms there.`
+              }
+            >
+              <span>{ERA_LABELS[layer.id] ?? layer.name}</span>
+            </button>
+          );
+        })}
       </section>
 
       <p className="sr-only" role="status" aria-live="polite">

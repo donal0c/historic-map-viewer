@@ -1,4 +1,4 @@
-import { beforeEach, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, it, test, vi } from "vitest";
 import {
   clearPlaceSearchCache,
   normalizePlaceName,
@@ -28,7 +28,8 @@ test("searches English and Irish names from one lazy chunk", async () => {
   const irish = await searchLocalPlaces("Baile Mór", fetcher);
 
   expect(fetcher).toHaveBeenCalledTimes(1);
-  expect(english[0]).toMatchObject({
+  // Notable towns (Ballymena, Ballymote) rank first; the gazetteer follows.
+  expect(english.find((result) => result.source === "gazetteer")).toMatchObject({
     label: "Ballymore",
     source: "gazetteer",
   });
@@ -58,4 +59,20 @@ test("stores a bounded, deduplicated recent-search list", () => {
   expect(readRecentSearches(storage)).toEqual([
     expect.objectContaining({ id: "two", label: "Glendalough", source: "recent" }),
   ]);
+});
+
+describe("searchNotablePlaces", () => {
+  it("ranks the monastic Glendalough ahead of same-named townlands", async () => {
+    const { searchNotablePlaces } = await import("./placeSearch");
+    const [first] = searchNotablePlaces("glendal");
+    expect(first?.label).toBe("Glendalough");
+    expect(first?.detail).toContain("County Wicklow");
+    expect(first?.source).toBe("curated");
+  });
+
+  it("matches Irish-language and historical aliases", async () => {
+    const { searchNotablePlaces } = await import("./placeSearch");
+    expect(searchNotablePlaces("Queenstown")[0]?.label).toBe("Cobh");
+    expect(searchNotablePlaces("Gaillimh")[0]?.label).toBe("Galway");
+  });
 });

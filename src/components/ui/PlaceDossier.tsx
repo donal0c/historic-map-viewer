@@ -14,6 +14,7 @@ import type {
 import { findLayer, historicalLayers } from "../../config/layers";
 import { heritageSourceById } from "../../config/heritageSources";
 import PlaceContext from "./PlaceContext";
+import { describeView } from "../../lib/viewLabel";
 
 interface PlaceDossierProps {
   state: MapState;
@@ -103,10 +104,7 @@ export default function PlaceDossier({
         aria-label="Open evidence summary for the current view"
       >
         <span className="eyebrow">Current view</span>
-        <strong>
-          {state.placeLabel ??
-            `${state.center[0].toFixed(3)}, ${state.center[1].toFixed(3)}`}
-        </strong>
+        <strong>{describeView(state)}</strong>
         <small>{historicalReadiness.message}</small>
         <em>
           {visibleFeatures.length}{hasTruncatedSource ? "+" : ""} nearby records
@@ -163,10 +161,7 @@ export default function PlaceDossier({
             —
           </button>
         </div>
-        <h2>
-          {state.placeLabel ??
-            `${state.center[0].toFixed(3)}, ${state.center[1].toFixed(3)}`}
-        </h2>
+        <h2>{describeView(state)}</h2>
         <p>{layer.name}</p>
       </div>
 

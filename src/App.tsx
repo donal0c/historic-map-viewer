@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LatLngTuple } from "leaflet";
 import { useMapState } from "./hooks/useMapState";
 import { useHashSync } from "./hooks/useHashSync";
@@ -17,6 +17,14 @@ import StoryPlayer from "./components/ui/StoryPlayer";
 import EvidenceBrowser from "./components/ui/EvidenceBrowser";
 import ShareSheet from "./components/ui/ShareSheet";
 import { defaultHeritageSourceIds } from "./config/heritageSources";
+import {
+  bestLayerForZoom,
+  clampZoomToLayer,
+  findLayer,
+  historicalLayers,
+  layerSupportsZoom,
+} from "./config/layers";
+import { TIME_LAPSE_LABELS } from "./lib/timeLapse";
 import { decodeHeritageSourceIds } from "./lib/hash";
 import { featureRepresentativeCoordinates } from "./lib/evidenceBrowser";
 import { buildShareDescriptor } from "./lib/share";
@@ -32,6 +40,9 @@ import type {
   HistoricalReadiness,
   SearchResult,
 } from "./types";
+
+/** Zoom used after a place search: street scale, where the six-inch sheets shine. */
+const SEARCH_ZOOM = 14;
 
 export default function App() {
   const {
@@ -56,6 +67,8 @@ export default function App() {
     state.zoom,
     stableEnabledSources,
   );
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const evidenceCenter = useMemo<[number, number]>(
     () => [state.center[0], state.center[1]],
     [state.center[0], state.center[1]],
@@ -186,9 +199,12 @@ export default function App() {
       setState((current) => ({
         ...current,
         center: [result.lat, result.lng],
-        zoom: 14,
+        zoom: SEARCH_ZOOM,
         viewTransition: "instant",
         placeLabel: result.label,
+        // Searching lands at street scale; keep the chosen era only if that
+        // sheet is drawn there, otherwise move to the nearest detailed sheet.
+        activeLayerId: bestLayerForZoom(SEARCH_ZOOM, current.activeLayerId),
       }));
       setSelectedFeature(null);
       setDossierOpen(false);
@@ -314,18 +330,52 @@ export default function App() {
 
   const handleViewChange = useCallback(
     (center: LatLngTuple, zoom: number) => {
+      const current = findLayer(stateRef.current.activeLayerId, historicalLayers);
+      const nextLayerId = bestLayerForZoom(zoom, stateRef.current.activeLayerId);
+      if (current && nextLayerId !== current.id) {
+        const next = findLayer(nextLayerId, historicalLayers);
+        pauseTimeLapse(
+          `Showing ${TIME_LAPSE_LABELS[nextLayerId] ?? next?.name}: the ${
+            TIME_LAPSE_LABELS[current.id] ?? current.name
+          } sheet is drawn at zoom ${current.minZoom ?? 6}–${current.maxZoom}.`,
+        );
+        setState((previous) => ({
+          ...previous,
+          center,
+          zoom,
+          viewTransition: "instant",
+          activeLayerId: nextLayerId,
+        }));
+        return;
+      }
       pauseTimeLapse("Time travel paused because you moved the map.");
       setViewPosition(center, zoom);
     },
-    [pauseTimeLapse, setViewPosition],
+    [pauseTimeLapse, setState, setViewPosition],
   );
 
   const handleTimelineChange = useCallback(
     (layerId: string) => {
+      const layer = findLayer(layerId, historicalLayers);
+      if (layer && !layerSupportsZoom(layer, stateRef.current.zoom)) {
+        // Choosing an edition that is not drawn here zooms to where it is,
+        // instead of silently showing an empty historical pane.
+        const zoom = clampZoomToLayer(layer, stateRef.current.zoom);
+        pauseTimeLapse(
+          `Zoomed to ${zoom} so the ${TIME_LAPSE_LABELS[layerId] ?? layer.name} sheet is visible.`,
+        );
+        setState((previous) => ({
+          ...previous,
+          zoom,
+          viewTransition: "fly",
+          activeLayerId: layerId,
+        }));
+        return;
+      }
       pauseTimeLapse("Time travel paused on the selected edition.");
       setActiveLayer(layerId);
     },
-    [pauseTimeLapse, setActiveLayer],
+    [pauseTimeLapse, setActiveLayer, setState],
   );
 
   const handleModeChange = useCallback(
@@ -452,6 +502,7 @@ export default function App() {
 
       <TimelineRail
         value={state.activeLayerId}
+        zoom={state.zoom}
         enabled={state.mode === "overlay" && !activeStoryRoute}
         isPlaying={isPlaying}
         playbackState={playbackState}

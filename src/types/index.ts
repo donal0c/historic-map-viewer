@@ -105,6 +105,8 @@ export interface TileLayerConfig {
   attribution: string;
   maxZoom: number;
   minZoom?: number;
+  /** Highest zoom the provider serves; beyond it tiles are upscaled. */
+  maxNativeZoom?: number;
   tms?: boolean;
   /** If set, tiles are served via composite county layer, not a simple URL */
   composite?: "6inch-1st" | "6inch-2nd";

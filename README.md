@@ -48,7 +48,7 @@ The catalogue combines:
 - Wreck Inventory of Ireland, defence heritage, Martello towers, WWII lookout posts, and Éire signs.
 - Workhouses, disused railways, canals, and navigable waterways.
 
-Historical map tiles are provided by the National Library of Scotland. Basemaps come from OpenStreetMap, CARTO, and Esri. Optional contextual summaries come from Wikipedia/Wikidata; any displayed image is attributed to its Wikimedia Commons author and item-specific licence. Every third-party source remains subject to its own licensing, uptime, and attribution requirements; this is an exploratory atlas, not a legal or statutory assessment.
+Historical map tiles are provided by the National Library of Scotland. Basemaps come from OpenStreetMap and Esri's public tile services (CARTO's free raster basemaps now require an API key and were retired from the catalogue). Optional contextual summaries come from Wikipedia/Wikidata; any displayed image is attributed to its Wikimedia Commons author and item-specific licence. Every third-party source remains subject to its own licensing, uptime, and attribution requirements; this is an exploratory atlas, not a legal or statutory assessment.
 
 The local townland index contains Tailte Éireann National Placenames Gazetteer data licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Regenerate the committed index with `pnpm build:places`; the script reads the public ArcGIS FeatureServer and records its source and licence in `public/data/places/manifest.json`.
 
@@ -58,6 +58,8 @@ The local townland index contains Tailte Éireann National Placenames Gazetteer 
 pnpm install
 pnpm dev
 ```
+
+The Vite dev server proxies `/api/*` to the production deployment so place context, external search fallback, and share routes work locally without the Vercel runtime.
 
 Quality gates:
 

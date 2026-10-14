@@ -17,6 +17,7 @@
   --accent-bright: #2d8d75;
   --vermilion: #a64d32;
   --shadow: 0 18px 54px rgba(17, 20, 15, 0.2);
+  --serif: "Newsreader", var(--serif);
 }
 
 * {
@@ -86,11 +87,17 @@ select:focus-visible {
 .toolbar-label {
   margin: 0;
   color: #9da797;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.19em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   line-height: 1.25;
   text-transform: uppercase;
+}
+
+.toolbar-label {
+  color: #7f877c;
+  font-weight: 650;
+  letter-spacing: 0.12em;
 }
 
 /* Map runtime */
@@ -201,7 +208,9 @@ select:focus-visible {
 }
 
 .nls-composite-tile {
-  position: relative;
+  /* Leaflet positions tiles absolutely; never override that or tiles stack in flow. */
+  position: absolute;
+  overflow: hidden;
 }
 
 .nls-composite-tile img {
@@ -252,7 +261,7 @@ select:focus-visible {
   left: 70px;
   z-index: 1000;
   display: grid;
-  grid-template-columns: minmax(350px, 0.82fr) minmax(0, 1.18fr);
+  grid-template-columns: minmax(360px, 0.8fr) minmax(0, 1.2fr);
   min-height: 118px;
   overflow: visible;
   border: 1px solid rgba(245, 240, 226, 0.12);
@@ -265,22 +274,23 @@ select:focus-visible {
 .search-panel {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(135px, 0.72fr) minmax(0, 1.28fr);
-  align-items: center;
-  gap: 16px;
+  grid-template-columns: 1fr;
+  align-content: center;
+  gap: 10px;
   min-width: 0;
   border-right: 1px solid rgba(245, 240, 226, 0.12);
-  padding: 17px 18px;
+  padding: 15px 18px 16px;
 }
 
 .search-panel h1 {
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   color: #fbf6e9;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
-  font-size: clamp(23px, 2vw, 31px);
+  font-family: var(--serif);
+  font-size: 25px;
   font-weight: 500;
-  line-height: 0.98;
-  letter-spacing: -0.025em;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .search-panel-heading {
@@ -398,7 +408,7 @@ select:focus-visible {
   margin: 0;
   padding: 6px 9px 5px 43px;
   color: var(--accent);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.17em;
   text-transform: uppercase;
@@ -419,7 +429,7 @@ select:focus-visible {
 }
 
 .search-results strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 15px;
   font-weight: 600;
 }
@@ -489,7 +499,7 @@ select:focus-visible {
 
 .explore-header h2 {
   margin: 4px 0 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: clamp(25px, 3vw, 38px);
   font-weight: 500;
   line-height: 1;
@@ -500,7 +510,7 @@ select:focus-visible {
   max-width: 560px;
   margin: 9px 0 0;
   color: #62675e;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 14px;
   line-height: 1.4;
 }
@@ -534,7 +544,9 @@ select:focus-visible {
   padding: 0;
   text-align: left;
   color: #fffaf0;
-  background: #4c5147;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 22px, rgba(255, 250, 235, 0.035) 22px 23px),
+    radial-gradient(circle at 70% 30%, #6b6f61, #3f453d 70%);
   cursor: pointer;
   isolation: isolate;
 }
@@ -598,11 +610,11 @@ select:focus-visible {
 .featured-story-copy em {
   margin-bottom: auto;
   color: #d9cbb1;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .featured-story-copy strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: clamp(29px, 3.3vw, 45px);
   font-weight: 500;
   line-height: 0.92;
@@ -638,7 +650,7 @@ select:focus-visible {
 
 .explore-section-label {
   margin: 0 0 6px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.17em;
   text-transform: uppercase;
@@ -687,7 +699,7 @@ select:focus-visible {
 }
 
 .story-index button strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 16px;
   font-weight: 600;
   line-height: 1.05;
@@ -730,7 +742,7 @@ select:focus-visible {
   padding: 0;
   text-align: left;
   color: #fffaf0;
-  background: #55594f;
+  background: radial-gradient(circle at 60% 35%, #6e7264, #474c43 75%);
   cursor: pointer;
 }
 
@@ -767,7 +779,7 @@ select:focus-visible {
 }
 
 .destination-strip button em {
-  font-size: 7px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -775,7 +787,7 @@ select:focus-visible {
 
 .destination-strip button strong {
   overflow: hidden;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 12px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -785,7 +797,7 @@ select:focus-visible {
 .explore-panel footer {
   margin-top: 11px;
   color: #7b7e74;
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.4;
 }
 
@@ -836,7 +848,7 @@ select:focus-visible {
 }
 
 .story-player header > div:first-child > strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 18px;
   font-weight: 600;
 }
@@ -857,7 +869,7 @@ select:focus-visible {
   padding: 0 9px;
   color: var(--ink);
   background: transparent;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -878,7 +890,7 @@ select:focus-visible {
 
 .story-copy h2 {
   margin: 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: clamp(29px, 3vw, 40px);
   font-weight: 500;
   line-height: 0.98;
@@ -1014,8 +1026,8 @@ select:focus-visible {
   overflow: hidden;
   color: #c4c9be;
   background: transparent;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 650;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -1038,11 +1050,11 @@ select:focus-visible {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  color: #aeb5a9;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: #98a094;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .toolbar-stats span + span::before {
@@ -1137,7 +1149,7 @@ select:focus-visible {
 
 .layer-catalogue h2 {
   margin: 2px 0 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 30px;
   font-weight: 500;
 }
@@ -1162,6 +1174,13 @@ select:focus-visible {
   gap: 6px;
   border-bottom: 1px solid var(--line);
   padding: 10px 14px;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.catalogue-presets::-webkit-scrollbar {
+  display: none;
 }
 
 .catalogue-presets button {
@@ -1201,7 +1220,7 @@ select:focus-visible {
 }
 
 .catalogue-browse-records strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 15px;
   font-weight: 600;
 }
@@ -1269,7 +1288,7 @@ select:focus-visible {
 }
 
 .catalogue-groups label strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 13px;
   font-weight: 600;
 }
@@ -1318,7 +1337,7 @@ select:focus-visible {
 
 .dossier-peek > strong {
   overflow: hidden;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 20px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -1393,7 +1412,7 @@ select:focus-visible {
   padding: 6px 9px;
   color: var(--accent);
   background: transparent;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1430,7 +1449,7 @@ select:focus-visible {
 
 .dossier-header h2 {
   margin: 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 26px;
   font-weight: 500;
   letter-spacing: -0.015em;
@@ -1497,7 +1516,7 @@ select:focus-visible {
 
 .feature-empty strong {
   color: var(--ink);
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 17px;
   font-weight: 600;
 }
@@ -1529,7 +1548,7 @@ select:focus-visible {
 .place-context h3,
 .place-context h4 {
   margin: 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-weight: 600;
 }
 
@@ -1557,7 +1576,7 @@ select:focus-visible {
   padding: 0 11px;
   color: #fffdf4;
   background: var(--accent);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1606,7 +1625,7 @@ select:focus-visible {
 
 .context-match {
   color: var(--vermilion);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1629,7 +1648,7 @@ select:focus-visible {
 .context-article figcaption,
 .context-disclaimer {
   color: #787b70;
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -1684,7 +1703,7 @@ select:focus-visible {
 .feature-card h3 {
   margin: 0;
   padding-right: 35px;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 22px;
   font-weight: 500;
   line-height: 1.05;
@@ -1727,7 +1746,7 @@ select:focus-visible {
 
 .feature-related > strong {
   color: #74786e;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -1783,7 +1802,7 @@ select:focus-visible {
 }
 
 .feature-list button strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 15px;
   font-weight: 600;
   line-height: 1.12;
@@ -1865,7 +1884,7 @@ select:focus-visible {
 
 .evidence-browser-header h2 {
   margin: 3px 0 2px;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: clamp(28px, 3vw, 39px);
   font-weight: 500;
   letter-spacing: -0.025em;
@@ -1921,7 +1940,7 @@ select:focus-visible {
 
 .evidence-browser-count strong {
   color: var(--accent);
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 24px;
   font-weight: 600;
 }
@@ -1981,7 +2000,7 @@ select:focus-visible {
 
 .evidence-filter-grid label > span {
   color: #77796f;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2082,18 +2101,18 @@ select:focus-visible {
 }
 
 .evidence-source-health p strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 11px;
 }
 
 .evidence-source-health p small {
   color: #797c72;
-  font-size: 7px;
+  font-size: 9px;
 }
 
 .evidence-source-health p em {
   color: #777b72;
-  font-size: 8px;
+  font-size: 10px;
   font-style: normal;
 }
 
@@ -2147,7 +2166,7 @@ select:focus-visible {
   color: #646a61;
   background: #e5dfd2;
   font-family: ui-monospace, monospace;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .evidence-record {
@@ -2186,7 +2205,7 @@ select:focus-visible {
   align-items: center;
   gap: 6px;
   color: var(--accent);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2204,7 +2223,7 @@ select:focus-visible {
   overflow: hidden;
   color: #8a897e;
   font-family: ui-monospace, monospace;
-  font-size: 8px;
+  font-size: 10px;
   font-style: normal;
   font-weight: 500;
   letter-spacing: 0;
@@ -2214,7 +2233,7 @@ select:focus-visible {
 }
 
 .evidence-record > button > strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 18px;
   font-weight: 600;
   line-height: 1.12;
@@ -2231,7 +2250,7 @@ select:focus-visible {
 
 .evidence-record > button > small {
   color: #777c72;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.025em;
   text-transform: uppercase;
 }
@@ -2242,7 +2261,7 @@ select:focus-visible {
   right: 18px;
   bottom: 15px;
   color: var(--accent);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.07em;
   text-decoration: none;
@@ -2275,7 +2294,7 @@ select:focus-visible {
 }
 
 .evidence-empty strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 21px;
   font-weight: 600;
 }
@@ -2297,7 +2316,7 @@ select:focus-visible {
 .evidence-browser-footer p {
   margin: 0;
   color: #72766c;
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -2364,7 +2383,7 @@ select:focus-visible {
 
 .share-sheet > header h2 {
   margin: 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: 29px;
   font-weight: 500;
 }
@@ -2455,7 +2474,7 @@ select:focus-visible {
 .share-card-copy > p {
   margin: 0;
   color: var(--accent);
-  font-size: clamp(6px, 0.9vw, 9px);
+  font-size: clamp(7px, 0.9vw, 10px);
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -2464,7 +2483,7 @@ select:focus-visible {
 .share-card-copy h3 {
   max-width: 95%;
   margin: clamp(12px, 2vw, 24px) 0 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: clamp(22px, 4.2vw, 43px);
   font-weight: 500;
   line-height: 0.98;
@@ -2520,7 +2539,7 @@ select:focus-visible {
 }
 
 .share-card-copy footer strong {
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--serif);
   font-size: clamp(9px, 1.2vw, 13px);
 }
 
@@ -2649,7 +2668,7 @@ select:focus-visible {
   display: block;
   margin-bottom: 2px;
   color: var(--vermilion);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.18em;
   line-height: 1;
@@ -2674,7 +2693,7 @@ select:focus-visible {
 .time-lapse-edition small {
   margin-top: 2px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .time-lapse-actions {
@@ -2752,6 +2771,23 @@ select:focus-visible {
   color: #fffaf0;
   background: var(--vermilion);
   box-shadow: 0 9px 20px rgba(116, 55, 34, 0.22);
+}
+
+.timeline-rail button:not([data-drawn="true"]):not(.active) {
+  color: #b3b4aa;
+  font-weight: 650;
+}
+
+.timeline-rail button:not([data-drawn="true"]):not(.active):hover {
+  color: var(--ink-soft);
+}
+
+.timeline-rail button[data-drawn="zoom-out"] {
+  cursor: zoom-out;
+}
+
+.timeline-rail button[data-drawn="zoom-in"] {
+  cursor: zoom-in;
 }
 
 .has-explore .top-left-stack {
@@ -2837,25 +2873,25 @@ select:focus-visible {
 
 .comparison-label {
   position: absolute;
-  top: 24px;
+  top: 150px;
   z-index: 760;
   border: 1px solid rgba(251, 247, 235, 0.18);
   border-radius: 999px;
   padding: 7px 10px;
   color: #f9f4e7;
   background: rgba(28, 33, 28, 0.92);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
 .comparison-label-modern {
-  left: 18px;
+  left: 70px;
 }
 
 .comparison-label-historic {
-  right: 18px;
+  left: calc(50% + 14px);
 }
 
 .swipe-divider {
@@ -2948,7 +2984,7 @@ select:focus-visible {
   border-top: 1px solid var(--line);
   padding-top: 6px;
   color: #85887f;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .map-legend span > small {
@@ -2988,11 +3024,6 @@ select:focus-visible {
     grid-template-columns: minmax(330px, 0.8fr) minmax(0, 1.2fr);
   }
 
-  .search-panel {
-    grid-template-columns: 1fr;
-    gap: 9px;
-  }
-
   .search-panel h1 {
     font-size: 23px;
   }
@@ -3010,6 +3041,11 @@ select:focus-visible {
   .top-left-stack {
     right: 18px;
     grid-template-columns: minmax(300px, 0.75fr) minmax(440px, 1.25fr);
+  }
+
+  /* The atlas bar now spans the full width, so the peek sits beneath it. */
+  .dossier-peek {
+    top: 150px;
   }
 
   .place-dossier {
@@ -3069,7 +3105,7 @@ select:focus-visible {
 
   .atlas-open-button {
     padding: 6px 9px;
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .search-form button {
@@ -3369,7 +3405,7 @@ select:focus-visible {
   .dossier-peek > em {
     margin-top: 3px;
     padding-top: 6px;
-    font-size: 7px;
+    font-size: 9px;
     letter-spacing: 0.08em;
   }
 
@@ -3401,7 +3437,7 @@ select:focus-visible {
     display: none;
     max-width: 80%;
     overflow: hidden;
-    font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+    font-family: var(--serif);
     font-size: 14px;
     font-weight: 600;
     text-overflow: ellipsis;
@@ -3621,6 +3657,10 @@ select:focus-visible {
     max-height: none;
   }
 
+  .has-explore .leaflet-control-zoom {
+    display: none;
+  }
+
   .has-explore .map-toolbar,
   .has-explore .dossier-peek,
   .has-explore .place-dossier,
@@ -3652,7 +3692,7 @@ select:focus-visible {
     padding: 0 5px;
     border-color: rgba(250, 245, 231, 0.14);
     border-radius: 10px;
-    font-size: 7px;
+    font-size: 9px;
   }
 
   .search-form button {

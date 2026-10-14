@@ -78,22 +78,26 @@ export const basemapLayers: TileLayerConfig[] = [
     maxZoom: 19,
   },
   {
+    // CARTO's keyless raster basemaps now return an "API KEY REQUIRED"
+    // placeholder, so the quiet canvases come from Esri's public tile services.
     id: "light",
     name: "Light",
-    description: "CartoDB Positron (light theme)",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    description: "Esri World Light Gray Canvas",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    maxZoom: 20,
+      '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    maxNativeZoom: 16,
   },
   {
     id: "dark",
     name: "Dark",
-    description: "CartoDB Dark Matter",
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    description: "Esri World Dark Gray Canvas",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    maxZoom: 20,
+      '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    maxNativeZoom: 16,
   },
   {
     id: "satellite",
@@ -111,4 +115,57 @@ export function findLayer(
   layers: TileLayerConfig[]
 ): TileLayerConfig | undefined {
   return layers.find((l) => l.id === id);
+}
+
+export function layerSupportsZoom(
+  layer: TileLayerConfig,
+  zoom: number,
+): boolean {
+  return zoom >= (layer.minZoom ?? 0) && zoom <= layer.maxZoom;
+}
+
+/** Representative survey year for each series, used to find the nearest era. */
+const HISTORICAL_ERA_YEAR: Record<string, number> = {
+  "6inch-1st": 1836,
+  "ireland-1inch-1st": 1888,
+  "6inch-2nd": 1900,
+  "ireland-1inch-2nd": 1900,
+  bartholomew: 1940,
+  gsgs4136: 1941,
+};
+
+const DETAILED_ZOOM = 13;
+
+/**
+ * Returns the historical layer to show at `zoom`. The preferred layer wins
+ * whenever it is drawn at that zoom. Otherwise the nearest era that is drawn
+ * takes over; at street scale the detailed six-inch county sheets are
+ * preferred over an over-zoomed one-inch sheet, so a place search or a deep
+ * zoom never lands on an empty or illegible historical pane.
+ */
+export function bestLayerForZoom(zoom: number, preferredId: string): string {
+  const preferred = findLayer(preferredId, historicalLayers);
+  if (preferred && layerSupportsZoom(preferred, zoom)) return preferredId;
+
+  const preferredYear = HISTORICAL_ERA_YEAR[preferredId] ?? 1900;
+  const candidates = historicalLayers
+    .filter((layer) => layerSupportsZoom(layer, zoom))
+    .map((layer) => ({
+      id: layer.id,
+      scalePenalty: zoom >= DETAILED_ZOOM && !layer.composite ? 1 : 0,
+      distance: Math.abs((HISTORICAL_ERA_YEAR[layer.id] ?? 1900) - preferredYear),
+      completeness: layer.id === "6inch-2nd" ? 0 : 1,
+    }))
+    .sort(
+      (left, right) =>
+        left.scalePenalty - right.scalePenalty ||
+        left.distance - right.distance ||
+        left.completeness - right.completeness,
+    );
+  return candidates[0]?.id ?? preferredId;
+}
+
+/** Clamps a zoom into the range a historical layer is drawn at. */
+export function clampZoomToLayer(layer: TileLayerConfig, zoom: number): number {
+  return Math.min(layer.maxZoom, Math.max(layer.minZoom ?? 0, zoom));
 }

@@ -1,5 +1,6 @@
 import {
   type FormEvent,
+  Fragment,
   type KeyboardEvent,
   useEffect,
   useRef,
@@ -181,17 +182,30 @@ export default function SearchPanel({
           {cleanQuery.length === 0 && recentResults.length > 0 && (
             <p className="search-results-label">Recent places</p>
           )}
-          {cleanQuery.length >= 2 && localResults.length > 0 && (
-            <p className="search-results-label">
-              Irish townlands <span>Tailte Éireann</span>
-            </p>
-          )}
           {visibleResults.map((result, index) => {
             const isExternal =
               index >= localResults.length && cleanQuery.length > 0;
+            const label =
+              cleanQuery.length < 2 || isExternal
+                ? null
+                : result.source === "curated"
+                  ? index === 0
+                    ? "Notable places"
+                    : null
+                  : visibleResults[index - 1]?.source !== "gazetteer"
+                    ? "townlands"
+                    : null;
             return (
+              <Fragment key={`${result.source}-${result.id}`}>
+              {label === "Notable places" && (
+                <p className="search-results-label">Notable places</p>
+              )}
+              {label === "townlands" && (
+                <p className="search-results-label">
+                  Irish townlands <span>Tailte Éireann</span>
+                </p>
+              )}
               <button
-                key={`${result.source}-${result.id}`}
                 ref={(element) => {
                   resultButtons.current[index] = element;
                 }}
@@ -220,6 +234,7 @@ export default function SearchPanel({
                 <strong>{result.label}</strong>
                 <span>{result.detail}</span>
               </button>
+              </Fragment>
             );
           })}
 
@@ -253,11 +268,12 @@ export default function SearchPanel({
               Place search is temporarily unavailable. The map still works normally.
             </p>
           )}
-          {cleanQuery.length >= 2 && localResults.length > 0 && (
-            <p className="search-attribution">
-              Gazetteer data © Tailte Éireann, CC BY 4.0
-            </p>
-          )}
+          {cleanQuery.length >= 2 &&
+            localResults.some((result) => result.source === "gazetteer") && (
+              <p className="search-attribution">
+                Gazetteer data © Tailte Éireann, CC BY 4.0
+              </p>
+            )}
         </div>
       )}
     </section>

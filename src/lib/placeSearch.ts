@@ -1,4 +1,5 @@
 import type { SearchResult } from "../types";
+import { notablePlaces } from "../data/notablePlaces";
 
 type PlaceRecord = [
   id: string,
@@ -23,6 +24,44 @@ export function normalizePlaceName(value: string): string {
     .trim();
 }
 
+const MAX_NOTABLE_RESULTS = 3;
+const MAX_LOCAL_RESULTS = 8;
+
+/**
+ * Well-known towns, cities, and heritage sites rank ahead of the townland
+ * gazetteer, so "Glendalough" opens the monastic valley rather than a
+ * same-named townland in another county.
+ */
+export function searchNotablePlaces(query: string): SearchResult[] {
+  const normalizedQuery = normalizePlaceName(query);
+  if (normalizedQuery.length < 2) return [];
+  return notablePlaces
+    .flatMap((place) => {
+      const score = Math.min(
+        matchScore(normalizePlaceName(place.name), normalizedQuery),
+        ...place.aliases.map((alias) =>
+          matchScore(normalizePlaceName(alias), normalizedQuery),
+        ),
+      );
+      if (!Number.isFinite(score)) return [];
+      return [{ place, score }];
+    })
+    .sort(
+      (left, right) =>
+        left.score - right.score ||
+        left.place.name.localeCompare(right.place.name, "en-IE"),
+    )
+    .slice(0, MAX_NOTABLE_RESULTS)
+    .map(({ place }) => ({
+      id: `notable-${place.id}`,
+      label: place.name,
+      detail: `${place.kind} · County ${place.county}`,
+      lat: place.lat,
+      lng: place.lng,
+      source: "curated" as const,
+    }));
+}
+
 export async function searchLocalPlaces(
   query: string,
   fetcher: typeof fetch = fetch,
@@ -33,6 +72,7 @@ export async function searchLocalPlaces(
     return [];
   }
 
+  const notable = searchNotablePlaces(query);
   const records = await loadChunk(chunkKey, fetcher);
   const matches = records
     .flatMap((record) => {
@@ -74,9 +114,9 @@ export async function searchLocalPlaces(
       left.score - right.score ||
       left.name.localeCompare(right.name, "en-IE"),
     )
-    .slice(0, 8)
+    .slice(0, MAX_LOCAL_RESULTS - notable.length)
     .map(({ result }) => result);
-  return disambiguateDuplicatePlaces(matches);
+  return [...notable, ...disambiguateDuplicatePlaces(matches)];
 }
 
 function loadChunk(key: string, fetcher: typeof fetch) {

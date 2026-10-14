@@ -20,6 +20,7 @@ import {
   type EvidenceFilterState,
   type EvidenceRecord,
 } from "../../lib/evidenceBrowser";
+import { formatCentre } from "../../lib/viewLabel";
 import type {
   HeritageCategoryId,
   HeritageData,
@@ -170,7 +171,7 @@ export default function EvidenceBrowser({
             Evidence in this view
           </h2>
           <p>
-            {placeLabel ?? `${center[0].toFixed(3)}, ${center[1].toFixed(3)}`}
+            {placeLabel ?? formatCentre(center)}
             <span aria-hidden="true"> · </span>
             {(data.radiusMeters / 1000).toFixed(1)} km radius
           </p>
